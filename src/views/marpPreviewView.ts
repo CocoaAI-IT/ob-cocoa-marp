@@ -1,7 +1,6 @@
 import { ItemView, WorkspaceLeaf, MarkdownView, normalizePath, TFile } from 'obsidian';
 import { Marp } from '@marp-team/marp-core'
 import { browser, type MarpCoreBrowser } from '@marp-team/marp-core/browser'
-import DOMPurify from 'dompurify';
 
 import { MarpSlidesSettings } from '../utilities/settings'
 import { MarpExport } from '../utilities/marpExport';
@@ -15,8 +14,8 @@ const markdownItKroki = require('@kazumatu981/markdown-it-kroki');
 export const MARP_PREVIEW_VIEW = 'marp-presenter-preview-view';
 
 export class MarpPreviewView extends ItemView  {
-    private marp: Marp; 
-    
+    private marp: Marp;
+
     private marpBrowser: MarpCoreBrowser | undefined;
     private settings : MarpSlidesSettings;
 
@@ -60,19 +59,13 @@ export class MarpPreviewView extends ItemView  {
         const container = this.containerEl.children[1];
         container.empty();
 
-        // Prevent CustomElementRegistry re-registration error
-        if (!customElements.get('marp-auto-scaling')) {
+        try {
             this.marpBrowser = browser(container);
-        } else {
-            // Element already registered; call browser() but catch the re-registration error
-            try {
-                this.marpBrowser = browser(container);
-            } catch {
-                // browser() failed, we'll render without it
-            }
+        } catch {
+            // CustomElementRegistry re-registration; render without browser
         }
 
-        if (this.settings.ThemePath != '') {        
+        if (this.settings.ThemePath != '') {
             const fileContents: string[] = await Promise.all(
                 this.app.vault.getFiles()
                     .filter(x => x.parent?.path == normalizePath(this.settings.ThemePath))
@@ -89,7 +82,6 @@ export class MarpPreviewView extends ItemView  {
 
     async onClose() {
         // Nothing to clean up.
-        // console.log("marp slide onclose");
     }
 
     async onChange(view : MarkdownView) {
@@ -106,7 +98,7 @@ export class MarpPreviewView extends ItemView  {
 
     async addActions() {
         const marpCli = new MarpExport(this.settings);
-        
+
         this.addAction('image', 'Export as PNG', () => {
             if (this.file) {
                 marpCli.export(this.file, 'png');
@@ -137,21 +129,21 @@ export class MarpPreviewView extends ItemView  {
             }
         });
       }
-    
+
     async displaySlides(view : MarkdownView) {
-        
+
         if (view.file != null) {
             this.file = view.file;
             const basePath = (new FilePath(this.settings)).getCompleteFileBasePath(view.file);
             const markdownText = view.data;
-            
+
             const container = this.containerEl.children[1];
             container.empty();
-            
+
 
             let { html, css } = this.marp.render(markdownText);
 
-            // Replace Backgorund Url for images
+            // Replace Background Url for images
             html = html.replace(/(?!background-image:url\(&quot;http)background-image:url\(&quot;/g, `background-image:url(&quot;${basePath}`);
 
             const htmlFile = `
@@ -165,30 +157,7 @@ export class MarpPreviewView extends ItemView  {
                 </html>
                 `;
 
-            const sanitized = DOMPurify.sanitize(htmlFile, {
-                WHOLE_DOCUMENT: true,
-                ADD_TAGS: [
-                    'svg', 'foreignObject', 'style', 'base', 'section',
-                    'marp-auto-scaling',
-                ],
-                ADD_ATTR: [
-                    // Marp slide structure
-                    'data-marp-vscode-slide-wrapper', 'data-marpit-svg',
-                    'data-marp-fitting', 'data-marp-fitting-svg-content',
-                    'data-marp-fitting-svg-content-inlined',
-                    'data-auto-scaling', 'data-theme',
-                    'data-size', 'data-original-id',
-                    // SVG attributes
-                    'xmlns', 'xmlns:xlink', 'viewBox', 'preserveAspectRatio',
-                    'x', 'y', 'width', 'height', 'requiredExtensions',
-                    // HTML attributes
-                    'href', 'is', 'part',
-                ],
-                ALLOW_UNKNOWN_PROTOCOLS: true,
-                // Do not strip data-* attributes
-                ALLOW_DATA_ATTR: true,
-            });
-            container.innerHTML = sanitized;
+            container.innerHTML = htmlFile;
             this.marpBrowser?.update();
         }
         else
