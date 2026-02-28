@@ -12,12 +12,32 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === "production");
 
+// Plugin to force pptxgenjs to use browser code paths in Obsidian (Electron).
+// Electron has process.versions.node set, so pptxgenjs thinks it's Node.js
+// and tries to import('node:https') / import('node:fs') which fail in Obsidian.
+const pptxBrowserPlugin = {
+	name: 'pptxgenjs-browser',
+	setup(build) {
+		build.onLoad({ filter: /pptxgenjs[/\\]dist[/\\]pptxgen\./ }, async (args) => {
+			const fs = await import('fs');
+			let contents = fs.readFileSync(args.path, 'utf8');
+			// Replace isNode detection patterns (both readable and minified forms)
+			contents = contents.replaceAll(
+				/(?:const|var|let)\s+isNode\s*=\s*typeof process\s*!==?\s*['"]undefined['"]\s*&&\s*!!\(.*?\.node\).*?===?\s*['"]node['"]/g,
+				'const isNode = false'
+			);
+			return { contents, loader: 'js' };
+		});
+	}
+};
+
 const context = await esbuild.context({
 	banner: {
 		js: banner,
 	},
 	entryPoints: ["main.ts"],
 	bundle: true,
+	plugins: [pptxBrowserPlugin],
 	external: [
 		"obsidian",
 		"electron",
