@@ -147,7 +147,7 @@ export default class MarpSlides extends Plugin {
 	async showPreviewSlide(){
 		const existingLeaves = this.app.workspace.getLeavesOfType(MARP_PREVIEW_VIEW);
 		if (existingLeaves.length > 0) {
-			existingLeaves.forEach(leaf => leaf.detach());
+			this.app.workspace.detachLeavesOfType(MARP_PREVIEW_VIEW);
 			return;
 		}
 

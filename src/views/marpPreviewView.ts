@@ -59,13 +59,16 @@ export class MarpPreviewView extends ItemView  {
     async onOpen() {
         const container = this.containerEl.children[1];
         container.empty();
-        try {
+
+        // Prevent CustomElementRegistry re-registration error
+        if (!customElements.get('marp-auto-scaling')) {
             this.marpBrowser = browser(container);
-        } catch (e) {
-            // Ignore CustomElementRegistry re-registration error
-            // when another Marp plugin already registered the element
-            if (!(e instanceof DOMException && e.name === 'NotSupportedError')) {
-                throw e;
+        } else {
+            // Element already registered; call browser() but catch the re-registration error
+            try {
+                this.marpBrowser = browser(container);
+            } catch {
+                // browser() failed, we'll render without it
             }
         }
 
@@ -164,15 +167,26 @@ export class MarpPreviewView extends ItemView  {
 
             const sanitized = DOMPurify.sanitize(htmlFile, {
                 WHOLE_DOCUMENT: true,
-                ADD_TAGS: ['svg', 'foreignObject', 'style', 'meta', 'base', 'section'],
+                ADD_TAGS: [
+                    'svg', 'foreignObject', 'style', 'base', 'section',
+                    'marp-auto-scaling',
+                ],
                 ADD_ATTR: [
+                    // Marp slide structure
                     'data-marp-vscode-slide-wrapper', 'data-marpit-svg',
                     'data-marp-fitting', 'data-marp-fitting-svg-content',
+                    'data-marp-fitting-svg-content-inlined',
                     'data-auto-scaling', 'data-theme',
+                    'data-size', 'data-original-id',
+                    // SVG attributes
                     'xmlns', 'xmlns:xlink', 'viewBox', 'preserveAspectRatio',
-                    'http-equiv', 'content', 'href',
+                    'x', 'y', 'width', 'height', 'requiredExtensions',
+                    // HTML attributes
+                    'href', 'is', 'part',
                 ],
                 ALLOW_UNKNOWN_PROTOCOLS: true,
+                // Do not strip data-* attributes
+                ALLOW_DATA_ATTR: true,
             });
             container.innerHTML = sanitized;
             this.marpBrowser?.update();
