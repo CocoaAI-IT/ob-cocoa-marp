@@ -5,6 +5,22 @@ nav_order: 99
 
 # Changelog
 
+## [1.1.0] (2026-02-28)
+
+
+### Bug Fixes
+
+* fix presentation mode black screen by using same rendering approach as preview ([innerHTML injection + CSS display toggle instead of DOM parsing + cloneNode](https://github.com/samuele-cozzi/obsidian-marp-slides))
+
+## [1.0.0] (2026-02-27)
+
+
+### Features
+
+* fork as marp-slides-presenter with security fixes and presentation mode
+* remove DOMPurify to restore preview rendering
+* resolve view type and custom element registration conflicts
+
 ## [0.45.6](https://github.com/samuele-cozzi/obsidian-marp-slides/compare/0.45.5...0.45.6) (2024-05-08)
 
 

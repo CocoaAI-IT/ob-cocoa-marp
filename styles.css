@@ -38,8 +38,12 @@
     justify-content: center;
 }
 
-.marp-presentation-slide-container [data-marp-vscode-slide-wrapper],
-.marp-presentation-slide-container > div > section {
+.marp-presentation-slide-container [data-marp-vscode-slide-wrapper] {
+    display: none !important;
+}
+
+.marp-presentation-slide-container [data-marp-vscode-slide-wrapper].active {
+    display: block !important;
     max-width: 100%;
     max-height: 100%;
 }

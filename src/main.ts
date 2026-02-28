@@ -1,4 +1,6 @@
 import { MarkdownView, TAbstractFile, Plugin, addIcon, App, PluginSettingTab, Setting, EditorSuggest, EditorPosition, Editor, TFile, EditorSuggestTriggerInfo, EditorSuggestContext, normalizePath  } from 'obsidian';
+import { Marp } from '@marp-team/marp-core';
+import { MathOptions } from '@marp-team/marp-core/types/src/math/math';
 
 import { MARP_PREVIEW_VIEW, MarpPreviewView } from './views/marpPreviewView';
 import { MarpPresentationView } from './views/marpPresentationView';
@@ -7,6 +9,10 @@ import { FilePath } from './utilities/filePath';
 import { ICON_SLIDE_PREVIEW, ICON_EXPORT_PDF, ICON_EXPORT_PPTX, ICON_SLIDE_PRESENT } from './utilities/icons';
 import { Libs } from './utilities/libs';
 import { MarpSlidesSettings, DEFAULT_SETTINGS } from 'utilities/settings';
+
+const markdownItContainer = require('markdown-it-container');
+const markdownItMark = require('markdown-it-mark');
+const markdownItKroki = require('@kazumatu981/markdown-it-kroki');
 
 
 export default class MarpSlides extends Plugin {
@@ -131,17 +137,46 @@ export default class MarpSlides extends Plugin {
 		const basePath = filePathUtil.getCompleteFileBasePath(view.file);
 		const markdownText = view.data;
 
-		let themeContents: string[] = [];
+		// Use the same Marp setup as the preview
+		const marp = new Marp({
+			container: { tag: 'div', id: '__marp-vscode' },
+			slideContainer: { tag: 'div', 'data-marp-vscode-slide-wrapper': '' },
+			html: this.settings.EnableHTML,
+			inlineSVG: {
+				enabled: true,
+				backdropSelector: false,
+			},
+			math: this.settings.MathTypesettings as MathOptions,
+			minifyCSS: true,
+			script: false,
+		});
+
+		if (this.settings.EnableMarkdownItPlugins) {
+			marp
+				.use(markdownItContainer, 'container')
+				.use(markdownItMark)
+				.use(markdownItKroki, { entrypoint: 'https://kroki.io' });
+		}
+
 		if (this.settings.ThemePath !== '') {
-			themeContents = await Promise.all(
+			const themeContents = await Promise.all(
 				this.app.vault.getFiles()
 					.filter(x => x.parent?.path === normalizePath(this.settings.ThemePath))
 					.map(file => this.app.vault.cachedRead(file))
 			);
+			themeContents.forEach(css => marp.themeSet.add(css));
 		}
 
-		const presenter = new MarpPresentationView(this.settings);
-		await presenter.present(markdownText, basePath, themeContents);
+		let { html, css } = marp.render(markdownText);
+
+		// Replace background image URLs for local resources (same as preview)
+		html = html.replace(
+			/(?!background-image:url\(&quot;http)background-image:url\(&quot;/g,
+			`background-image:url(&quot;${basePath}`
+		);
+
+		const presenter = new MarpPresentationView();
+		await presenter.present(html, css, basePath);
 	}
 
 	async showPreviewSlide(){

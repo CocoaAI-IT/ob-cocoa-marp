@@ -1,72 +1,37 @@
-import { Marp } from '@marp-team/marp-core';
-import { MarpSlidesSettings } from '../utilities/settings';
-import { MathOptions } from '@marp-team/marp-core/types/src/math/math';
-
-const markdownItContainer = require('markdown-it-container');
-const markdownItMark = require('markdown-it-mark');
-const markdownItKroki = require('@kazumatu981/markdown-it-kroki');
+import { browser, type MarpCoreBrowser } from '@marp-team/marp-core/browser';
 
 export class MarpPresentationView {
     private overlay: HTMLDivElement | null = null;
     private slideContainer: HTMLDivElement | null = null;
     private counter: HTMLDivElement | null = null;
     private laserPointer: HTMLDivElement | null = null;
-    private slides: HTMLElement[] = [];
+    private slideWrappers: HTMLElement[] = [];
     private currentIndex = 0;
     private laserActive = false;
-    private settings: MarpSlidesSettings;
 
     private boundKeyDown: (e: KeyboardEvent) => void;
     private boundClick: (e: MouseEvent) => void;
     private boundMouseMove: (e: MouseEvent) => void;
     private boundFullscreenChange: () => void;
 
-    constructor(settings: MarpSlidesSettings) {
-        this.settings = settings;
+    constructor() {
         this.boundKeyDown = this.handleKeyDown.bind(this);
         this.boundClick = this.handleClick.bind(this);
         this.boundMouseMove = this.handleMouseMove.bind(this);
         this.boundFullscreenChange = this.handleFullscreenChange.bind(this);
     }
 
-    async present(markdownText: string, basePath: string, themeContents: string[]): Promise<void> {
-        const marp = new Marp({
-            container: { tag: 'div', id: '__marp-vscode' },
-            slideContainer: { tag: 'div', 'data-marp-vscode-slide-wrapper': '' },
-            html: this.settings.EnableHTML,
-            inlineSVG: {
-                enabled: true,
-                backdropSelector: false,
-            },
-            math: this.settings.MathTypesettings as MathOptions,
-            minifyCSS: true,
-            script: false,
-        });
+    async present(html: string, css: string, basePath: string): Promise<void> {
+        this.createOverlay(html, css, basePath);
 
-        if (this.settings.EnableMarkdownItPlugins) {
-            marp
-                .use(markdownItContainer, 'container')
-                .use(markdownItMark)
-                .use(markdownItKroki, { entrypoint: 'https://kroki.io' });
-        }
+        this.slideWrappers = Array.from(
+            this.slideContainer!.querySelectorAll('[data-marp-vscode-slide-wrapper]')
+        ) as HTMLElement[];
 
-        themeContents.forEach(css => marp.themeSet.add(css));
-
-        let { html, css } = marp.render(markdownText);
-
-        // Replace background image URLs for local resources
-        html = html.replace(
-            /(?!background-image:url\(&quot;http)background-image:url\(&quot;/g,
-            `background-image:url(&quot;${basePath}`
-        );
-
-        this.slides = this.parseSlides(html);
-
-        if (this.slides.length === 0) {
+        if (this.slideWrappers.length === 0) {
             return;
         }
 
-        this.createOverlay(css, basePath);
         this.showSlide(0);
 
         document.addEventListener('keydown', this.boundKeyDown);
@@ -79,41 +44,33 @@ export class MarpPresentationView {
         }
     }
 
-    private parseSlides(html: string): HTMLElement[] {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-
-        const wrappers = tempDiv.querySelectorAll('[data-marp-vscode-slide-wrapper]');
-        if (wrappers.length > 0) {
-            return Array.from(wrappers) as HTMLElement[];
-        }
-
-        // Fallback: try section elements (Marp default)
-        const sections = tempDiv.querySelectorAll('section');
-        if (sections.length > 0) {
-            return Array.from(sections) as HTMLElement[];
-        }
-
-        // Last fallback: use the entire HTML as one slide
-        const single = document.createElement('div');
-        single.innerHTML = html;
-        return [single];
-    }
-
-    private createOverlay(css: string, basePath: string): void {
+    private createOverlay(html: string, css: string, basePath: string): void {
         this.overlay = document.createElement('div');
         this.overlay.className = 'marp-presentation-overlay';
 
-        const style = document.createElement('style');
-        style.textContent = css;
-        this.overlay.appendChild(style);
-
-        const base = document.createElement('base');
-        base.href = basePath;
-        this.overlay.appendChild(base);
-
         this.slideContainer = document.createElement('div');
         this.slideContainer.className = 'marp-presentation-slide-container';
+
+        // Inject the full HTML document just like the preview does
+        const htmlFile = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <base href="${basePath}"></base>
+            <style id="__marp-vscode-style">${css}</style>
+            </head>
+            <body>${html}</body>
+            </html>
+        `;
+        this.slideContainer.innerHTML = htmlFile;
+
+        // Apply marp-core browser for custom element styles
+        try {
+            browser(this.slideContainer);
+        } catch {
+            // CustomElementRegistry re-registration; continue without browser
+        }
+
         this.overlay.appendChild(this.slideContainer);
 
         this.counter = document.createElement('div');
@@ -132,29 +89,24 @@ export class MarpPresentationView {
     }
 
     private showSlide(index: number): void {
-        if (index < 0 || index >= this.slides.length) {
+        if (index < 0 || index >= this.slideWrappers.length) {
             return;
         }
 
         this.currentIndex = index;
 
-        if (this.slideContainer) {
-            this.slideContainer.innerHTML = '';
-
-            const wrapper = document.createElement('div');
-            wrapper.id = '__marp-vscode';
-            const clone = this.slides[index].cloneNode(true) as HTMLElement;
-            wrapper.appendChild(clone);
-            this.slideContainer.appendChild(wrapper);
+        // Hide all slides, show only the current one
+        for (let i = 0; i < this.slideWrappers.length; i++) {
+            this.slideWrappers[i].classList.toggle('active', i === index);
         }
 
         if (this.counter) {
-            this.counter.textContent = `${this.currentIndex + 1} / ${this.slides.length}`;
+            this.counter.textContent = `${this.currentIndex + 1} / ${this.slideWrappers.length}`;
         }
     }
 
     private nextSlide(): void {
-        if (this.currentIndex < this.slides.length - 1) {
+        if (this.currentIndex < this.slideWrappers.length - 1) {
             this.showSlide(this.currentIndex + 1);
         }
     }
@@ -186,7 +138,7 @@ export class MarpPresentationView {
                 break;
             case 'End':
                 e.preventDefault();
-                this.showSlide(this.slides.length - 1);
+                this.showSlide(this.slideWrappers.length - 1);
                 break;
             case 'Escape':
                 e.preventDefault();
@@ -253,7 +205,7 @@ export class MarpPresentationView {
         this.slideContainer = null;
         this.counter = null;
         this.laserPointer = null;
-        this.slides = [];
+        this.slideWrappers = [];
         this.currentIndex = 0;
         this.laserActive = false;
 
