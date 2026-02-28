@@ -1,10 +1,12 @@
-import { ItemView, WorkspaceLeaf, MarkdownView, normalizePath, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, MarkdownView, TFile, setIcon } from 'obsidian';
 import { Marp } from '@marp-team/marp-core'
 import { browser, type MarpCoreBrowser } from '@marp-team/marp-core/browser'
 
 import { MarpSlidesSettings } from '../utilities/settings'
 import { MarpExport } from '../utilities/marpExport';
+import { MarpPresentationView } from './marpPresentationView';
 import { FilePath } from '../utilities/filePath'
+import { ThemeLoader } from '../utilities/themeLoader'
 import { MathOptions } from '@marp-team/marp-core/types/src/math/math';
 
 const markdownItContainer = require('markdown-it-container');
@@ -20,6 +22,9 @@ export class MarpPreviewView extends ItemView  {
     private settings : MarpSlidesSettings;
 
     private file : TFile;
+    private themesLoaded: Promise<void>;
+    private slideContentEl: HTMLDivElement;
+    private toolbarEl: HTMLDivElement;
 
     constructor(settings: MarpSlidesSettings, leaf: WorkspaceLeaf) {
         super(leaf);
@@ -56,26 +61,26 @@ export class MarpPreviewView extends ItemView  {
     }
 
     async onOpen() {
-        const container = this.containerEl.children[1];
+        const container = this.containerEl.children[1] as HTMLElement;
         container.empty();
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+
+        // Create toolbar
+        this.toolbarEl = container.createDiv({ cls: 'marp-preview-toolbar' });
+        this.createToolbarButtons();
+
+        // Create content area
+        this.slideContentEl = container.createDiv({ cls: 'marp-preview-content' });
 
         try {
-            this.marpBrowser = browser(container);
+            this.marpBrowser = browser(this.slideContentEl);
         } catch {
             // CustomElementRegistry re-registration; render without browser
         }
 
-        if (this.settings.ThemePath != '') {
-            const fileContents: string[] = await Promise.all(
-                this.app.vault.getFiles()
-                    .filter(x => x.parent?.path == normalizePath(this.settings.ThemePath))
-                    .map((file) => this.app.vault.cachedRead(file))
-            );
-
-            fileContents.forEach((content) => {
-                this.marp.themeSet.add(content);
-            });
-        }
+        this.themesLoaded = ThemeLoader.loadThemes(this.marp, this.settings, this.app);
+        await this.themesLoaded;
 
         this.addActions();
     }
@@ -89,15 +94,14 @@ export class MarpPreviewView extends ItemView  {
     }
 
     async onLineChanged(line: number) {
-        try {
-		    this.containerEl.children[1].children[2].children[line].scrollIntoView();
-        } catch {
-            console.log("Preview slide not found!")
+        const slides = this.slideContentEl.querySelectorAll('[data-marp-vscode-slide-wrapper]');
+        if (line >= 0 && line < slides.length) {
+            slides[line].scrollIntoView({ block: 'start' });
         }
-	}
+    }
 
     async addActions() {
-        const marpCli = new MarpExport(this.settings);
+        const marpCli = new MarpExport(this.settings, this.app);
 
         this.addAction('image', 'Export as PNG', () => {
             if (this.file) {
@@ -130,16 +134,77 @@ export class MarpPreviewView extends ItemView  {
         });
       }
 
+    private createToolbarButtons() {
+        const marpCli = new MarpExport(this.settings, this.app);
+
+        // Present button
+        const presentBtn = this.toolbarEl.createEl('button', {
+            cls: 'marp-toolbar-btn',
+            attr: { 'aria-label': 'Start Presentation' }
+        });
+        const presentIcon = presentBtn.createSpan({ cls: 'marp-toolbar-btn-icon' });
+        setIcon(presentIcon, 'play');
+        presentBtn.createSpan({ cls: 'marp-toolbar-btn-label', text: 'Present' });
+        presentBtn.addEventListener('click', () => this.startPresentation());
+
+        // PPTX (image) button - marp-cli version
+        const pptxBtn = this.toolbarEl.createEl('button', {
+            cls: 'marp-toolbar-btn',
+            attr: { 'aria-label': 'Export PPTX (image-based, high quality)' }
+        });
+        const pptxIcon = pptxBtn.createSpan({ cls: 'marp-toolbar-btn-icon' });
+        setIcon(pptxIcon, 'download');
+        pptxBtn.createSpan({ cls: 'marp-toolbar-btn-label', text: 'PPTX' });
+        pptxBtn.addEventListener('click', () => {
+            if (this.file) {
+                marpCli.export(this.file, 'pptx');
+            }
+        });
+
+        // PPTX Edit button - pptxgenjs version
+        const pptxEditBtn = this.toolbarEl.createEl('button', {
+            cls: 'marp-toolbar-btn',
+            attr: { 'aria-label': 'Export editable PPTX (text selectable)' }
+        });
+        const editIcon = pptxEditBtn.createSpan({ cls: 'marp-toolbar-btn-icon' });
+        setIcon(editIcon, 'file-edit');
+        pptxEditBtn.createSpan({ cls: 'marp-toolbar-btn-label', text: 'PPTX Edit' });
+        pptxEditBtn.addEventListener('click', () => {
+            if (this.file) {
+                marpCli.export(this.file, 'pptx-editable');
+            }
+        });
+    }
+
+    private async startPresentation() {
+        if (!this.file) return;
+
+        const markdownText = await this.app.vault.read(this.file);
+        const basePath = (new FilePath(this.settings)).getCompleteFileBasePath(this.file);
+
+        let { html, css } = this.marp.render(markdownText);
+
+        html = html.replace(
+            /(?!background-image:url\(&quot;http)background-image:url\(&quot;/g,
+            `background-image:url(&quot;${basePath}`
+        );
+
+        const presenter = new MarpPresentationView();
+        await presenter.present(html, css, basePath);
+    }
+
     async displaySlides(view : MarkdownView) {
+        // Ensure themes are loaded before rendering
+        if (this.themesLoaded) {
+            await this.themesLoaded;
+        }
 
         if (view.file != null) {
             this.file = view.file;
             const basePath = (new FilePath(this.settings)).getCompleteFileBasePath(view.file);
             const markdownText = view.data;
 
-            const container = this.containerEl.children[1];
-            container.empty();
-
+            this.slideContentEl.empty();
 
             let { html, css } = this.marp.render(markdownText);
 
@@ -157,7 +222,7 @@ export class MarpPreviewView extends ItemView  {
                 </html>
                 `;
 
-            container.innerHTML = htmlFile;
+            this.slideContentEl.innerHTML = htmlFile;
             this.marpBrowser?.update();
         }
         else

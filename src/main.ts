@@ -1,4 +1,4 @@
-import { MarkdownView, TAbstractFile, Plugin, addIcon, App, PluginSettingTab, Setting, EditorSuggest, EditorPosition, Editor, TFile, EditorSuggestTriggerInfo, EditorSuggestContext, normalizePath  } from 'obsidian';
+import { MarkdownView, TAbstractFile, Plugin, addIcon, App, PluginSettingTab, Setting, EditorSuggest, EditorPosition, Editor, TFile, EditorSuggestTriggerInfo, EditorSuggestContext } from 'obsidian';
 import { Marp } from '@marp-team/marp-core';
 import { MathOptions } from '@marp-team/marp-core/types/src/math/math';
 
@@ -8,6 +8,7 @@ import { MarpExport } from './utilities/marpExport';
 import { FilePath } from './utilities/filePath';
 import { ICON_SLIDE_PREVIEW, ICON_EXPORT_PDF, ICON_EXPORT_PPTX, ICON_SLIDE_PRESENT } from './utilities/icons';
 import { Libs } from './utilities/libs';
+import { ThemeLoader } from './utilities/themeLoader';
 import { MarpSlidesSettings, DEFAULT_SETTINGS } from 'utilities/settings';
 
 const markdownItContainer = require('markdown-it-container');
@@ -71,6 +72,12 @@ export default class MarpSlides extends Plugin {
 		});
 
 		this.addCommand({
+			id: 'export-pptx-editable',
+			name: 'Export Editable PPTX',
+			callback: (() => this.exportFile('pptx-editable'))
+		});
+
+		this.addCommand({
 			id: 'export-png',
 			name: 'Export PNG',
 			callback: (() => this.exportFile('png'))
@@ -121,8 +128,8 @@ export default class MarpSlides extends Plugin {
 
 	async exportFile(type: string){
 		const file = this.app.workspace.getActiveFile();
-		if(file !== null){	
-		const marpCli = new MarpExport(this.settings);
+		if(file !== null){
+		const marpCli = new MarpExport(this.settings, this.app);
 			await marpCli.export(file,type);
 		}
 	}
@@ -158,14 +165,7 @@ export default class MarpSlides extends Plugin {
 				.use(markdownItKroki, { entrypoint: 'https://kroki.io' });
 		}
 
-		if (this.settings.ThemePath !== '') {
-			const themeContents = await Promise.all(
-				this.app.vault.getFiles()
-					.filter(x => x.parent?.path === normalizePath(this.settings.ThemePath))
-					.map(file => this.app.vault.cachedRead(file))
-			);
-			themeContents.forEach(css => marp.themeSet.add(css));
-		}
+		await ThemeLoader.loadThemes(marp, this.settings, this.app);
 
 		let { html, css } = marp.render(markdownText);
 
@@ -264,6 +264,16 @@ export class MarpSlidesSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Built-in Themes')
+			.setDesc('Enable built-in themes (e.g. ClassMethod). Use theme: classmethod in frontmatter to apply. Custom themes can extend via @import-theme "classmethod".')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.EnableBuiltinThemes)
+				.onChange(async (value) => {
+					this.plugin.settings.EnableBuiltinThemes = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Export Path')
 			.setDesc('Sets the custom path to export PDF, PPTX, and images. If it\'s empty, Marp will export in the same folder of the note. Export path does not affect HTML export')
 			.addText(text => text
@@ -343,29 +353,45 @@ class LineSelectionListener extends EditorSuggest<string> {
 	}
 
 	onTrigger(cursor: EditorPosition, editor: Editor, file: TFile): EditorSuggestTriggerInfo | null {
-		//console.log("line: " + cursor.line);
-		//console.log("ch: " + cursor.ch);
-		//console.log("value: " + editor.getValue());
-        
-        let triggerInfo: EditorSuggestTriggerInfo = {start:cursor, end:cursor, query:""};
-        const instance = this.plugin.getViewInstance();
+		const instance = this.plugin.getViewInstance();
+		if (!instance) return null;
 
-		if (instance) {
-			const lines = editor.getValue().split('\n');
-			const firstNLines = lines.slice(0, cursor.line);
-			const text = firstNLines.join('\n');
-			
-			const regex = new RegExp('---', 'g');
-			let matches = text.match(regex);
-			let slide = matches ? matches.length : 0;
-			var matter = require('gray-matter');
-			const frontMatter = matter(text);
-			if (frontMatter.data !== null && Object.keys(frontMatter.data).length > 0) {
-				instance.onLineChanged(slide - 2);
-			} else {
-				instance.onLineChanged(slide);
-			}			
+		const lines = editor.getValue().split('\n');
+		let slide = 0;
+		let inCodeBlock = false;
+		let inFrontMatter = false;
+		let frontMatterPassed = false;
+
+		for (let i = 0; i < cursor.line; i++) {
+			const trimmed = lines[i].trim();
+
+			// コードブロックの開始/終了を追跡
+			if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+				inCodeBlock = !inCodeBlock;
+				continue;
+			}
+
+			if (inCodeBlock) continue;
+
+			// フロントマター処理（ドキュメント先頭のみ）
+			if (i === 0 && trimmed === '---') {
+				inFrontMatter = true;
+				continue;
+			}
+			if (inFrontMatter && trimmed === '---') {
+				inFrontMatter = false;
+				frontMatterPassed = true;
+				continue;
+			}
+			if (inFrontMatter) continue;
+
+			// スライド区切り
+			if (trimmed === '---') {
+				slide++;
+			}
 		}
+
+		instance.onLineChanged(slide);
 		return null;
 	}
 	getSuggestions(context: EditorSuggestContext): string[] | Promise<string[]> {

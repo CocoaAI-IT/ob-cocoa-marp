@@ -1,7 +1,9 @@
 import marpCli, { CLIError, CLIErrorCode } from '@marp-team/marp-cli'
-import { TFile } from 'obsidian';
+import { TFile, App } from 'obsidian';
 import { MarpSlidesSettings } from './settings';
 import { FilePath } from './filePath';
+import { ThemeLoader } from './themeLoader';
+import { exportEditablePptx } from './pptxExport';
 
 export class MarpCLIError extends Error {}
 
@@ -9,8 +11,11 @@ export class MarpExport {
 
     private settings : MarpSlidesSettings;
 
-    constructor(settings: MarpSlidesSettings) {
+    private app: App | null;
+
+    constructor(settings: MarpSlidesSettings, app?: App) {
         this.settings = settings;
+        this.app = app || null;
     }
 
     private validatePath(path: string, label: string): void {
@@ -20,6 +25,14 @@ export class MarpExport {
     }
 
     async export(file: TFile, type: string){
+        // Editable PPTX export doesn't need Chrome or marp-cli
+        if (type === 'pptx-editable') {
+            if (this.app) {
+                await exportEditablePptx(file, this.app, this.settings);
+            }
+            return;
+        }
+
         this.validatePath(this.settings.EXPORT_PATH, 'EXPORT_PATH');
         this.validatePath(this.settings.CHROME_PATH, 'CHROME_PATH');
 
@@ -40,6 +53,13 @@ export class MarpExport {
             if (this.settings.EnableMarkdownItPlugins){
                 argv.push('--engine');
                 argv.push(marpEngineConfig);
+            }
+
+            if (this.settings.EnableBuiltinThemes) {
+                const pluginDir = filesTool.getPluginDirectory(file.vault);
+                const builtinDir = ThemeLoader.writeBuiltinThemesForExport(pluginDir);
+                argv.push('--theme-set');
+                argv.push(builtinDir);
             }
 
             if (themePath != ''){

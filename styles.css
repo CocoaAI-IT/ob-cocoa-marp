@@ -1,7 +1,66 @@
 /*
   Marp Slides Presenter - Styles
-  Fullscreen presentation overlay and laser pointer
+  Toolbar, fullscreen presentation overlay, and laser pointer
 */
+
+/* Preview toolbar */
+.marp-preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    flex-shrink: 0;
+}
+
+.marp-preview-toolbar .clickable-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.marp-preview-toolbar .clickable-icon:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
+.marp-toolbar-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: var(--radius-s);
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+}
+
+.marp-toolbar-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
+.marp-toolbar-btn-icon {
+    display: flex;
+    align-items: center;
+}
+
+.marp-toolbar-btn-label {
+    white-space: nowrap;
+}
+
+.marp-preview-content {
+    flex: 1;
+    overflow: auto;
+}
 
 .marp-presentation-overlay {
     position: fixed;
@@ -28,24 +87,35 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    position: relative;
 }
 
 .marp-presentation-slide-container > div {
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative;
 }
 
 .marp-presentation-slide-container [data-marp-vscode-slide-wrapper] {
-    display: none !important;
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    visibility: hidden !important;
+    z-index: 0;
 }
 
 .marp-presentation-slide-container [data-marp-vscode-slide-wrapper].active {
-    display: block !important;
-    max-width: 100%;
-    max-height: 100%;
+    visibility: visible !important;
+    z-index: 1;
+}
+
+.marp-presentation-slide-container [data-marp-vscode-slide-wrapper] svg[data-marpit-svg] {
+    width: 100%;
+    height: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
 }
 
 .marp-presentation-counter {
