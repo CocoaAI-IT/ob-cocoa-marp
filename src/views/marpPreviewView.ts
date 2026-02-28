@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, MarkdownView, normalizePath, TFile } from 'obsidian';
 import { Marp } from '@marp-team/marp-core'
 import { browser, type MarpCoreBrowser } from '@marp-team/marp-core/browser'
+import DOMPurify from 'dompurify';
 
 import { MarpSlidesSettings } from '../utilities/settings'
 import { MarpExport } from '../utilities/marpExport';
@@ -140,7 +141,7 @@ export class MarpPreviewView extends ItemView  {
             
 
             let { html, css } = this.marp.render(markdownText);
-            
+
             // Replace Backgorund Url for images
             html = html.replace(/(?!background-image:url\(&quot;http)background-image:url\(&quot;/g, `background-image:url(&quot;${basePath}`);
 
@@ -148,6 +149,7 @@ export class MarpPreviewView extends ItemView  {
                 <!DOCTYPE html>
                 <html>
                 <head>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src app: data: https:; font-src data:;">
                 <base href="${basePath}"></base>
                 <style id="__marp-vscode-style">${css}</style>
                 </head>
@@ -155,7 +157,19 @@ export class MarpPreviewView extends ItemView  {
                 </html>
                 `;
 
-            container.innerHTML = htmlFile;
+            const sanitized = DOMPurify.sanitize(htmlFile, {
+                WHOLE_DOCUMENT: true,
+                ADD_TAGS: ['svg', 'foreignObject', 'style', 'meta', 'base', 'section'],
+                ADD_ATTR: [
+                    'data-marp-vscode-slide-wrapper', 'data-marpit-svg',
+                    'data-marp-fitting', 'data-marp-fitting-svg-content',
+                    'data-auto-scaling', 'data-theme',
+                    'xmlns', 'xmlns:xlink', 'viewBox', 'preserveAspectRatio',
+                    'http-equiv', 'content', 'href',
+                ],
+                ALLOW_UNKNOWN_PROTOCOLS: true,
+            });
+            container.innerHTML = sanitized;
             this.marpBrowser?.update();
         }
         else

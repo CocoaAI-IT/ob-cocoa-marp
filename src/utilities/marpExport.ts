@@ -13,7 +13,16 @@ export class MarpExport {
         this.settings = settings;
     }
 
+    private validatePath(path: string, label: string): void {
+        if (path && path.includes('..')) {
+            throw new Error(`${label} must not contain '..': ${path}`);
+        }
+    }
+
     async export(file: TFile, type: string){
+        this.validatePath(this.settings.EXPORT_PATH, 'EXPORT_PATH');
+        this.validatePath(this.settings.CHROME_PATH, 'CHROME_PATH');
+
         const filesTool = new FilePath(this.settings);
         await filesTool.removeFileFromRoot(file);
         await filesTool.copyFileToRoot(file);

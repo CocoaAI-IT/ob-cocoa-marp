@@ -1,8 +1,68 @@
 /*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
+  Marp Slides Presenter - Styles
+  Fullscreen presentation overlay and laser pointer
 */
+
+.marp-presentation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.marp-presentation-overlay.laser-active {
+    cursor: none;
+}
+
+.marp-presentation-slide-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.marp-presentation-slide-container > div {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marp-presentation-slide-container [data-marp-vscode-slide-wrapper],
+.marp-presentation-slide-container > div > section {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.marp-presentation-counter {
+    position: fixed;
+    bottom: 16px;
+    right: 24px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    font-family: system-ui, -apple-system, sans-serif;
+    z-index: 10000;
+    pointer-events: none;
+    user-select: none;
+}
+
+.marp-laser-pointer {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ff0000;
+    box-shadow: 0 0 8px 4px rgba(255, 0, 0, 0.6);
+    pointer-events: none;
+    position: fixed;
+    z-index: 10001;
+}

@@ -1,9 +1,11 @@
-import { App } from 'obsidian';
+import { App, requestUrl } from 'obsidian';
 import { FilePath } from './filePath';
 import { MarpSlidesSettings } from './settings';
 import { existsSync, outputFileSync } from 'fs-extra';
-import request from 'request';
 import JSZip from 'jszip';
+import { createHash } from 'crypto';
+
+const EXPECTED_SHA256 = '';
 
 export class Libs {
 
@@ -12,50 +14,42 @@ export class Libs {
     constructor(settings: MarpSlidesSettings) {
         this.settings = settings;
     }
- 
-    loadLibs(app: App){
+
+    async loadLibs(app: App){
         const libPathUtility = new FilePath(this.settings);
         const libPath = libPathUtility.getLibDirectory(app.vault);
 
         if (!existsSync(libPath)) {
-			//Download binary
-			const downloadUrl = `https://github.com/samuele-cozzi/obsidian-marp-slides/releases/download/lib-v3/lib.zip`;
+            const downloadUrl = `https://github.com/samuele-cozzi/obsidian-marp-slides/releases/download/lib-v3/lib.zip`;
 
-			const bufs: Uint8Array[] = [];
-			
-			let buf: Uint8Array;
-			request
-				.get(downloadUrl)
-				.on('end', () => {
-					console.log(bufs);
-					buf = Buffer.concat(bufs);
-					const zip : JSZip = new JSZip();
-					zip
-						.loadAsync(buf)
-						.then(contents => {
-							Object.keys(contents.files).forEach(function (filename) {
-								if (!contents.files[filename].dir) {
-									const file = zip.file(filename);
-									if (file != null){
-										file.async('nodebuffer')
-										.then(function (content) {
-											const dest = `${libPathUtility.getLibDirectory(app.vault)}${filename}`;
-											outputFileSync(dest, content);
-										});
-									}
-								}
-							});
-						})
-						.catch(error => {
-							console.log(error);
-						});
-				})
-				.on('error', error => {
-					console.log(error);
-				})
-				.on('data', (d : Buffer) => {
-					bufs.push(new Uint8Array(d.buffer));
-				});
-		}
+            try {
+                const response = await requestUrl({ url: downloadUrl });
+                const buf = new Uint8Array(response.arrayBuffer);
+
+                if (EXPECTED_SHA256) {
+                    const hash = createHash('sha256').update(buf).digest('hex');
+                    if (hash !== EXPECTED_SHA256) {
+                        console.error(`SHA256 mismatch: expected ${EXPECTED_SHA256}, got ${hash}`);
+                        return;
+                    }
+                }
+
+                const zip = new JSZip();
+                const contents = await zip.loadAsync(buf);
+
+                for (const filename of Object.keys(contents.files)) {
+                    if (!contents.files[filename].dir) {
+                        const file = zip.file(filename);
+                        if (file != null) {
+                            const content = await file.async('nodebuffer');
+                            const dest = `${libPathUtility.getLibDirectory(app.vault)}${filename}`;
+                            outputFileSync(dest, content);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to download or extract libs:', error);
+            }
+        }
     }
 }

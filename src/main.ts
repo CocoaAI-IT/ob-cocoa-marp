@@ -1,7 +1,9 @@
-import { MarkdownView, TAbstractFile, Plugin, addIcon, App, PluginSettingTab, Setting, EditorSuggest, EditorPosition, Editor, TFile, EditorSuggestTriggerInfo, EditorSuggestContext  } from 'obsidian';
+import { MarkdownView, TAbstractFile, Plugin, addIcon, App, PluginSettingTab, Setting, EditorSuggest, EditorPosition, Editor, TFile, EditorSuggestTriggerInfo, EditorSuggestContext, normalizePath  } from 'obsidian';
 
 import { MARP_PREVIEW_VIEW, MarpPreviewView } from './views/marpPreviewView';
+import { MarpPresentationView } from './views/marpPresentationView';
 import { MarpExport } from './utilities/marpExport';
+import { FilePath } from './utilities/filePath';
 import { ICON_SLIDE_PREVIEW, ICON_EXPORT_PDF, ICON_EXPORT_PPTX, ICON_SLIDE_PRESENT } from './utilities/icons';
 import { Libs } from './utilities/libs';
 import { MarpSlidesSettings, DEFAULT_SETTINGS } from 'utilities/settings';
@@ -66,7 +68,17 @@ export default class MarpSlides extends Plugin {
 			id: 'export-png',
 			name: 'Export PNG',
 			callback: (() => this.exportFile('png'))
-		});		
+		});
+
+		this.addCommand({
+			id: 'present',
+			name: 'Start Presentation',
+			callback: () => { this.startPresentation(); }
+		});
+
+		this.addRibbonIcon('slides-marp-slide-present', 'Start Presentation', async () => {
+			await this.startPresentation();
+		});
 
 		// this.addCommand({
 		// 	id: 'export-deck',
@@ -109,7 +121,36 @@ export default class MarpSlides extends Plugin {
 		}
 	}
 
+	async startPresentation(){
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view || !view.file) {
+			return;
+		}
+
+		const filePathUtil = new FilePath(this.settings);
+		const basePath = filePathUtil.getCompleteFileBasePath(view.file);
+		const markdownText = view.data;
+
+		let themeContents: string[] = [];
+		if (this.settings.ThemePath !== '') {
+			themeContents = await Promise.all(
+				this.app.vault.getFiles()
+					.filter(x => x.parent?.path === normalizePath(this.settings.ThemePath))
+					.map(file => this.app.vault.cachedRead(file))
+			);
+		}
+
+		const presenter = new MarpPresentationView(this.settings);
+		await presenter.present(markdownText, basePath, themeContents);
+	}
+
 	async showPreviewSlide(){
+		const existingLeaves = this.app.workspace.getLeavesOfType(MARP_PREVIEW_VIEW);
+		if (existingLeaves.length > 0) {
+			existingLeaves.forEach(leaf => leaf.detach());
+			return;
+		}
+
 		this.editorView = this.app.workspace.getActiveViewOfType(MarkdownView);
 
 		if (!this.editorView) {
@@ -119,10 +160,8 @@ export default class MarpSlides extends Plugin {
 		this.slidesView = await this.activateView();
 		this.slidesView.displaySlides(this.editorView);
 	}
-	
+
 	async activateView() : Promise<MarpPreviewView> {
-		this.app.workspace.detachLeavesOfType(MARP_PREVIEW_VIEW);
-	
 		await this.app.workspace.getLeaf('split').setViewState({
 			type: MARP_PREVIEW_VIEW,
 			active: true,
@@ -161,7 +200,7 @@ export class MarpSlidesSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'MARP Slide Plugin - Settings'});
+		containerEl.createEl('h2', {text: 'Marp Slides Presenter - Settings'});
 
 		new Setting(containerEl)
 			.setName('Chrome Path')
@@ -170,6 +209,10 @@ export class MarpSlidesSettingTab extends PluginSettingTab {
 				.setPlaceholder('Enter CHROME_PATH')
 				.setValue(this.plugin.settings.CHROME_PATH)
 				.onChange(async (value) => {
+					if (value.includes('..')) {
+						console.error('CHROME_PATH must not contain ".."');
+						return;
+					}
 					this.plugin.settings.CHROME_PATH = value;
 					await this.plugin.saveSettings();
 				}));
@@ -192,6 +235,10 @@ export class MarpSlidesSettingTab extends PluginSettingTab {
 				.setPlaceholder('C:\\Users\\user\\Downloads\\')
 				.setValue(this.plugin.settings.EXPORT_PATH)
 				.onChange(async (value) => {
+					if (value.includes('..')) {
+						console.error('EXPORT_PATH must not contain ".."');
+						return;
+					}
 					this.plugin.settings.EXPORT_PATH = value;
 					await this.plugin.saveSettings();
 				}));
