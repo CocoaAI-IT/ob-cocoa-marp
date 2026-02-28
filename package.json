@@ -1,6 +1,6 @@
 {
 	"name": "marp-slides-presenter",
-	"version": "0.45.6",
+	"version": "1.0.0",
 	"description": "Create and present markdown-based Marp presentations in Obsidian with fullscreen presentation mode and laser pointer",
 	"main": "src/main.js",
 	"scripts": {
