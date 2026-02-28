@@ -12,7 +12,7 @@ const markdownItContainer = require('markdown-it-container');
 const markdownItMark = require('markdown-it-mark');
 const markdownItKroki = require('@kazumatu981/markdown-it-kroki');
 
-export const MARP_PREVIEW_VIEW = 'marp-preview-view';
+export const MARP_PREVIEW_VIEW = 'marp-presenter-preview-view';
 
 export class MarpPreviewView extends ItemView  {
     private marp: Marp; 
@@ -57,11 +57,17 @@ export class MarpPreviewView extends ItemView  {
     }
 
     async onOpen() {
-        // console.log("marp slide onopen");
-
         const container = this.containerEl.children[1];
         container.empty();
-        this.marpBrowser = browser(container);
+        try {
+            this.marpBrowser = browser(container);
+        } catch (e) {
+            // Ignore CustomElementRegistry re-registration error
+            // when another Marp plugin already registered the element
+            if (!(e instanceof DOMException && e.name === 'NotSupportedError')) {
+                throw e;
+            }
+        }
 
         if (this.settings.ThemePath != '') {        
             const fileContents: string[] = await Promise.all(
@@ -149,7 +155,6 @@ export class MarpPreviewView extends ItemView  {
                 <!DOCTYPE html>
                 <html>
                 <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src app: data: https:; font-src data:;">
                 <base href="${basePath}"></base>
                 <style id="__marp-vscode-style">${css}</style>
                 </head>
