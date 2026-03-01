@@ -1,38 +1,71 @@
-# Marp Slides for Obsidian
+# Marp Slides Presenter for Obsidian
 
-[![Version](https://img.shields.io/github/manifest-json/v/samuele-cozzi/obsidian-marp-slides?color=blue)](https://github.com/samuele-cozzi/obsidian-marp-slides/releases/latest)![Downloads](https://img.shields.io/github/downloads/samuele-cozzi/obsidian-marp-slides/total)[![CodeFactor](https://www.codefactor.io/repository/github/samuele-cozzi/obsidian-marp-slides/badge)](https://www.codefactor.io/repository/github/samuele-cozzi/obsidian-marp-slides)[![Maintainability](https://api.codeclimate.com/v1/badges/78932986b29ffe273e56/maintainability)](https://codeclimate.com/github/samuele-cozzi/obsidian-marp-slides/maintainability)[![Test Coverage](https://api.codeclimate.com/v1/badges/78932986b29ffe273e56/test_coverage)](https://codeclimate.com/github/samuele-cozzi/obsidian-marp-slides/test_coverage)[![LICENSE](https://img.shields.io/github/license/samuele-cozzi/obsidian-marp-slides)](https://github.com/samuele-cozzi/obsidian-marp-slides/blob/main/LICENSE)
-<!-- ![Obsidian Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=downloads&query=%24%5B%22better-word-count%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&style=for-the-badge) -->
+[Obsidian](https://obsidian.md) 上で [Marp](https://marp.app/) ベースのスライドを作成・プレゼンテーションできるプラグインです。
 
-Marp Slides is very simple & powerful slide deck extension for [Obsidian](href="https://obsidian.md") based on [Marp](https://marp.app/). View the **[DOCS](https://samuele-cozzi.github.io/obsidian-marp-slides/)** for [getting started](https://samuele-cozzi.github.io/obsidian-marp-slides/10.GettingStarted.html)
-
-![Alt text](docs/pictures/CreateSlides.gif)
-
-See the documentation of [Marpit Markdown](https://marpit.marp.app/markdown) and [the features of Marp Core](https://github.com/marp-team/marp-core#features) about how to write.
-Marp have powerful tools for Markdown Slides: [Marpit Framework](https://marpit.marp.app/), [CLI tool](https://github.com/marp-team/marp-cli), [Web interface](https://web.marp.app/) and so on.
-
-## Getting Started
-
-- [Read Documentation](https://samuele-cozzi.github.io/obsidian-marp-slides/)
-- [View the demo Presentation](https://samuele-cozzi.github.io/obsidian-marp-slides/pictures/Sample%20Pro%201.html)
+[samuele-cozzi/obsidian-marp-slides](https://github.com/samuele-cozzi/obsidian-marp-slides) をフォークし、プレゼンテーション機能や編集可能な PPTX エクスポートなどの機能を追加しています。
 
 ## Features
 
-- [Preview Slides](https://samuele-cozzi.github.io/obsidian-marp-slides/21.SlidesPreview.html)
-- [Export slide deck (html, pdf, pptx, img)](https://samuele-cozzi.github.io/obsidian-marp-slides/22.SlidesExport.html) using Marp cli API
-- [Use custom theme CSS](https://samuele-cozzi.github.io/obsidian-marp-slides/23.SlidesCustomTheme.html)
-- [Presenting](https://samuele-cozzi.github.io/obsidian-marp-slides/24.Presenting.html)
+- **スライドプレビュー** — Obsidian 内でスライドをリアルタイムプレビュー
+- **フルスクリーンプレゼンテーション** — Obsidian から直接スライドを発表
+- **エクスポート** — HTML / PDF / PNG / PPTX（画像ベース）への書き出し（Marp CLI 経由）
+- **編集可能 PPTX エクスポート** — テキスト編集可能な PPTX を生成（PptxGenJS 経由）
+- **カスタムテーマ CSS** — 独自テーマの適用
+- **ビルトインテーマ** — corporate / dark / enterprise テーマを同梱
 
-![Alt text](docs/pictures/ThemeSlides.gif)
+> **Note:** HTML 以外のエクスポートには [Google Chrome](https://www.google.com/chrome/)、[Chromium](https://www.chromium.org/)、または [Microsoft Edge](https://www.microsoft.com/edge) のいずれかが必要です。設定の `CHROME_PATH` でパスを指定できます。
 
-> ⚠️ Export except HTML requires to install any one of [Google Chrome](https://www.google.com/chrome/), [Chromium](https://www.chromium.org/), or [Microsoft Edge](https://www.microsoft.com/edge). You may also specify the custom path for Chrome / Chromium-based browser by preference `CHEROME_PATH`.
+## Getting Started
 
-## Not supported
+1. このリポジトリの Releases から `main.js`、`styles.css`、`manifest.json` をダウンロード
+2. Obsidian の Vault 内に `.obsidian/plugins/marp-slides-presenter/` フォルダを作成
+3. ダウンロードしたファイルを配置
+4. Obsidian の設定 → コミュニティプラグイン から有効化
 
-- Wiki Link
-- Mobile App Plugin is in Alpha Version
+## Usage
 
-## Many Thanks 👏
+Marp のフロントマターを持つ Markdown ファイルを開くと、プレビューパネルにスライドが表示されます。
 
-- [plugin obsidian development docs](https://marcus.se.net/obsidian-plugin-docs/)
-- [marp vs code](https://github.com/marp-team/marp-vscode)
-- [obsidian api](https://github.com/obsidianmd/obsidian-api)
+```markdown
+---
+marp: true
+theme: default
+paginate: true
+---
+
+# スライド 1
+
+---
+
+## スライド 2
+
+- ポイント 1
+- ポイント 2
+```
+
+ツールバーから以下の操作が可能です：
+
+| ボタン | 機能 |
+|--------|------|
+| **Present** | フルスクリーンプレゼンテーション |
+| **PPTX** | 画像ベース PPTX エクスポート（高品質） |
+| **PPTX Edit** | 編集可能 PPTX エクスポート（テキスト編集可能） |
+
+## Not Supported
+
+- Wiki Link (`[[...]]`)
+- モバイルアプリは未検証
+
+## Acknowledgements
+
+このプロジェクトは以下のプロジェクトに基づいています。感謝いたします。
+
+- **[samuele-cozzi/obsidian-marp-slides](https://github.com/samuele-cozzi/obsidian-marp-slides)** — フォーク元。Obsidian 上での Marp スライドプレビュー・エクスポートの基盤を構築されました
+- **[Marp](https://marp.app/)** — Markdown からスライドを生成するエコシステム（[Marp Core](https://github.com/marp-team/marp-core)、[Marp CLI](https://github.com/marp-team/marp-cli)、[Marpit](https://marpit.marp.app/)）
+- **[marp-team/marp-vscode](https://github.com/marp-team/marp-vscode)** — VS Code 向け Marp 拡張。レンダリング実装の参考にしました
+- **[PptxGenJS](https://github.com/gitbrent/PptxGenJS)** — JavaScript での PPTX 生成ライブラリ
+- **[Obsidian](https://obsidian.md)** — プラグインプラットフォーム（[API](https://github.com/obsidianmd/obsidian-api)、[Plugin Docs](https://docs.obsidian.md/Plugins/Getting+started/Build+a+plugin)）
+
+## License
+
+MIT License — 詳細は [LICENSE](LICENSE) を参照してください。
