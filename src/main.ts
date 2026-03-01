@@ -4,6 +4,9 @@ import { MathOptions } from '@marp-team/marp-core/types/src/math/math';
 
 import { MARP_PREVIEW_VIEW, MarpPreviewView } from './views/marpPreviewView';
 import { MarpPresentationView } from './views/marpPresentationView';
+import { MarpPresenterNotesView, MARP_PRESENTER_NOTES_VIEW } from './views/marpPresenterNotesView';
+import { PresentationController } from './views/presentationController';
+import { PresentationModal } from './views/presentationModal';
 import { MarpExport } from './utilities/marpExport';
 import { FilePath } from './utilities/filePath';
 import { ICON_SLIDE_PREVIEW, ICON_EXPORT_PDF, ICON_EXPORT_PPTX, ICON_SLIDE_PRESENT } from './utilities/icons';
@@ -31,6 +34,11 @@ export default class MarpSlides extends Plugin {
 		this.registerView(
 			MARP_PREVIEW_VIEW,
 			(leaf) => new MarpPreviewView(this.settings, leaf)
+		);
+
+		this.registerView(
+			MARP_PRESENTER_NOTES_VIEW,
+			(leaf) => new MarpPresenterNotesView(leaf)
 		);
 
 		addIcon('slides-preview-marp', ICON_SLIDE_PREVIEW);
@@ -110,6 +118,7 @@ export default class MarpSlides extends Plugin {
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(MARP_PREVIEW_VIEW);
+		this.app.workspace.detachLeavesOfType(MARP_PRESENTER_NOTES_VIEW);
 	}
 
 	async loadSettings() {
@@ -140,6 +149,10 @@ export default class MarpSlides extends Plugin {
 			return;
 		}
 
+		const modal = new PresentationModal(this.app);
+		const result = await modal.open();
+		if (!result) return;
+
 		const filePathUtil = new FilePath(this.settings);
 		const basePath = filePathUtil.getCompleteFileBasePath(view.file);
 		const markdownText = view.data;
@@ -167,7 +180,7 @@ export default class MarpSlides extends Plugin {
 
 		await ThemeLoader.loadThemes(marp, this.settings, this.app);
 
-		let { html, css } = marp.render(markdownText);
+		let { html, css, comments } = marp.render(markdownText);
 
 		// Replace background image URLs for local resources (same as preview)
 		html = html.replace(
@@ -175,8 +188,42 @@ export default class MarpSlides extends Plugin {
 			`background-image:url(&quot;${basePath}`
 		);
 
-		const presenter = new MarpPresentationView();
-		await presenter.present(html, css, basePath);
+		// Count slides for controller
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = html;
+		const totalSlides = tempDiv.querySelectorAll('[data-marp-vscode-slide-wrapper]').length;
+
+		const controller = new PresentationController(totalSlides, comments);
+
+		if (result.mode === 'fullscreen') {
+			const presenter = new MarpPresentationView();
+			await presenter.present(html, css, basePath, {
+				fullscreen: true,
+				controller,
+			});
+		} else {
+			const popoutLeaf = this.app.workspace.openPopoutLeaf();
+			const popoutDoc = popoutLeaf.view.containerEl.ownerDocument;
+			const presenter = new MarpPresentationView();
+			await presenter.present(html, css, basePath, {
+				fullscreen: false,
+				controller,
+				targetDocument: popoutDoc,
+			});
+		}
+
+		if (result.presenterView) {
+			this.app.workspace.detachLeavesOfType(MARP_PRESENTER_NOTES_VIEW);
+			const notesLeaf = this.app.workspace.openPopoutLeaf();
+			await notesLeaf.setViewState({
+				type: MARP_PRESENTER_NOTES_VIEW,
+				active: true,
+			});
+			const notesView = notesLeaf.view as MarpPresenterNotesView;
+			if (notesView?.initPresenter) {
+				notesView.initPresenter(controller, html, css, basePath);
+			}
+		}
 	}
 
 	async showPreviewSlide(){

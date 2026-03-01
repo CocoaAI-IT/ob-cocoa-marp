@@ -1,4 +1,11 @@
 import { browser, type MarpCoreBrowser } from '@marp-team/marp-core/browser';
+import { PresentationController } from './presentationController';
+
+export interface PresentOptions {
+    fullscreen: boolean;
+    controller?: PresentationController;
+    targetDocument?: Document;
+}
 
 export class MarpPresentationView {
     private overlay: HTMLDivElement | null = null;
@@ -8,6 +15,14 @@ export class MarpPresentationView {
     private slideWrappers: HTMLElement[] = [];
     private currentIndex = 0;
     private laserActive = false;
+    private controller: PresentationController | null = null;
+    private unsubscribe: (() => void) | null = null;
+    private targetDoc: Document = document;
+
+    // Auto-hide UI
+    private hideTimeout: ReturnType<typeof setTimeout> | null = null;
+    private uiVisible = true;
+    private readonly HIDE_DELAY = 3000;
 
     private boundKeyDown: (e: KeyboardEvent) => void;
     private boundClick: (e: MouseEvent) => void;
@@ -21,7 +36,11 @@ export class MarpPresentationView {
         this.boundFullscreenChange = this.handleFullscreenChange.bind(this);
     }
 
-    async present(html: string, css: string, basePath: string): Promise<void> {
+    async present(html: string, css: string, basePath: string, options?: PresentOptions): Promise<void> {
+        const fullscreen = options?.fullscreen ?? true;
+        this.controller = options?.controller ?? null;
+        this.targetDoc = options?.targetDocument ?? document;
+
         this.createOverlay(html, css, basePath);
 
         this.slideWrappers = Array.from(
@@ -32,23 +51,34 @@ export class MarpPresentationView {
             return;
         }
 
+        // Subscribe to controller for external slide changes
+        if (this.controller) {
+            this.unsubscribe = this.controller.subscribe((index) => {
+                this.showSlideInternal(index);
+            });
+        }
+
         this.showSlide(0);
 
-        document.addEventListener('keydown', this.boundKeyDown);
-        document.addEventListener('fullscreenchange', this.boundFullscreenChange);
+        this.targetDoc.addEventListener('keydown', this.boundKeyDown);
 
-        try {
-            await document.documentElement.requestFullscreen();
-        } catch {
-            // Fullscreen may be denied; continue in overlay mode
+        if (fullscreen) {
+            this.targetDoc.addEventListener('fullscreenchange', this.boundFullscreenChange);
+            try {
+                await this.targetDoc.documentElement.requestFullscreen();
+            } catch {
+                // Fullscreen may be denied; continue in overlay mode
+            }
         }
+
+        this.resetHideTimer();
     }
 
     private createOverlay(html: string, css: string, basePath: string): void {
-        this.overlay = document.createElement('div');
+        this.overlay = this.targetDoc.createElement('div') as HTMLDivElement;
         this.overlay.className = 'marp-presentation-overlay';
 
-        this.slideContainer = document.createElement('div');
+        this.slideContainer = this.targetDoc.createElement('div') as HTMLDivElement;
         this.slideContainer.className = 'marp-presentation-slide-container';
 
         // Inject the full HTML document just like the preview does
@@ -73,11 +103,11 @@ export class MarpPresentationView {
 
         this.overlay.appendChild(this.slideContainer);
 
-        this.counter = document.createElement('div');
+        this.counter = this.targetDoc.createElement('div') as HTMLDivElement;
         this.counter.className = 'marp-presentation-counter';
         this.overlay.appendChild(this.counter);
 
-        this.laserPointer = document.createElement('div');
+        this.laserPointer = this.targetDoc.createElement('div') as HTMLDivElement;
         this.laserPointer.className = 'marp-laser-pointer';
         this.laserPointer.style.display = 'none';
         this.overlay.appendChild(this.laserPointer);
@@ -85,10 +115,19 @@ export class MarpPresentationView {
         this.overlay.addEventListener('click', this.boundClick);
         this.overlay.addEventListener('mousemove', this.boundMouseMove);
 
-        document.body.appendChild(this.overlay);
+        this.targetDoc.body.appendChild(this.overlay);
     }
 
+    /** Show slide and notify controller */
     private showSlide(index: number): void {
+        this.showSlideInternal(index);
+        if (this.controller) {
+            this.controller.setSlide(index);
+        }
+    }
+
+    /** Show slide without notifying controller (used when controller triggers us) */
+    private showSlideInternal(index: number): void {
         if (index < 0 || index >= this.slideWrappers.length) {
             return;
         }
@@ -106,13 +145,17 @@ export class MarpPresentationView {
     }
 
     private nextSlide(): void {
-        if (this.currentIndex < this.slideWrappers.length - 1) {
+        if (this.controller) {
+            this.controller.next();
+        } else if (this.currentIndex < this.slideWrappers.length - 1) {
             this.showSlide(this.currentIndex + 1);
         }
     }
 
     private prevSlide(): void {
-        if (this.currentIndex > 0) {
+        if (this.controller) {
+            this.controller.prev();
+        } else if (this.currentIndex > 0) {
             this.showSlide(this.currentIndex - 1);
         }
     }
@@ -167,10 +210,20 @@ export class MarpPresentationView {
     }
 
     private handleMouseMove(e: MouseEvent): void {
+        this.resetHideTimer();
+
         if (!this.laserActive || !this.laserPointer) return;
 
         this.laserPointer.style.left = `${e.clientX - 6}px`;
         this.laserPointer.style.top = `${e.clientY - 6}px`;
+
+        // Broadcast pointer position to controller
+        if (this.controller && this.slideContainer) {
+            const rect = this.slideContainer.getBoundingClientRect();
+            const nx = (e.clientX - rect.left) / rect.width;
+            const ny = (e.clientY - rect.top) / rect.height;
+            this.controller.setPointer(nx, ny, true);
+        }
     }
 
     private toggleLaser(): void {
@@ -183,17 +236,63 @@ export class MarpPresentationView {
         if (this.laserPointer) {
             this.laserPointer.style.display = this.laserActive ? 'block' : 'none';
         }
+
+        // Notify controller when laser is turned off
+        if (!this.laserActive && this.controller) {
+            this.controller.setPointer(0, 0, false);
+        }
+    }
+
+    // Auto-hide UI methods
+    private resetHideTimer(): void {
+        this.showUI();
+        if (this.hideTimeout) {
+            clearTimeout(this.hideTimeout);
+        }
+        this.hideTimeout = setTimeout(() => this.hideUI(), this.HIDE_DELAY);
+    }
+
+    private showUI(): void {
+        if (this.uiVisible) return;
+        this.uiVisible = true;
+        if (this.overlay && !this.laserActive) {
+            this.overlay.classList.remove('cursor-hidden');
+        }
+        if (this.counter) {
+            this.counter.classList.remove('hidden');
+        }
+    }
+
+    private hideUI(): void {
+        if (!this.uiVisible) return;
+        this.uiVisible = false;
+        if (this.overlay) {
+            this.overlay.classList.add('cursor-hidden');
+        }
+        if (this.counter) {
+            this.counter.classList.add('hidden');
+        }
     }
 
     private handleFullscreenChange(): void {
-        if (!document.fullscreenElement && this.overlay) {
+        if (!this.targetDoc.fullscreenElement && this.overlay) {
             this.exit();
         }
     }
 
     exit(): void {
-        document.removeEventListener('keydown', this.boundKeyDown);
-        document.removeEventListener('fullscreenchange', this.boundFullscreenChange);
+        if (this.hideTimeout) {
+            clearTimeout(this.hideTimeout);
+            this.hideTimeout = null;
+        }
+
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+        }
+
+        this.targetDoc.removeEventListener('keydown', this.boundKeyDown);
+        this.targetDoc.removeEventListener('fullscreenchange', this.boundFullscreenChange);
 
         if (this.overlay) {
             this.overlay.removeEventListener('click', this.boundClick);
@@ -208,9 +307,12 @@ export class MarpPresentationView {
         this.slideWrappers = [];
         this.currentIndex = 0;
         this.laserActive = false;
+        this.controller = null;
 
-        if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => {});
+        if (this.targetDoc.fullscreenElement) {
+            this.targetDoc.exitFullscreen().catch(() => {});
         }
+
+        this.targetDoc = document;
     }
 }

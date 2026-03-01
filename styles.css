@@ -140,3 +140,210 @@
     position: fixed;
     z-index: 10001;
 }
+
+/* Auto-hide cursor and counter */
+.marp-presentation-overlay.cursor-hidden {
+    cursor: none;
+}
+
+.marp-presentation-counter {
+    transition: opacity 0.3s ease;
+}
+
+.marp-presentation-counter.hidden {
+    opacity: 0;
+}
+
+/* Presentation Modal */
+.marp-presentation-modal {
+    max-width: 400px;
+}
+
+.marp-modal-section {
+    margin-bottom: 16px;
+}
+
+.marp-modal-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.marp-modal-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 4px;
+}
+
+.marp-modal-radio-label,
+.marp-modal-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.marp-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+/* Presenter Notes View */
+.marp-presenter-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--background-primary);
+    padding: 12px;
+    gap: 12px;
+}
+
+.marp-presenter-slides-row {
+    display: flex;
+    gap: 12px;
+    flex: 0 0 auto;
+    max-height: 45%;
+}
+
+.marp-presenter-slide-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.marp-presenter-slide-label {
+    font-size: var(--font-ui-small);
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.marp-presenter-slide-preview {
+    flex: 1;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marp-presenter-slide-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.marp-presenter-slide-wrapper [data-marp-vscode-slide-wrapper] {
+    width: 100%;
+    height: 100%;
+}
+
+.marp-presenter-slide-wrapper svg[data-marpit-svg] {
+    width: 100%;
+    height: 100%;
+}
+
+.marp-presenter-no-slide {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+}
+
+.marp-presenter-notes-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.marp-presenter-notes-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+    font-size: var(--font-ui-medium);
+    line-height: 1.6;
+}
+
+.marp-presenter-no-notes {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.marp-presenter-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 8px;
+    border-top: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+}
+
+.marp-presenter-nav-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.marp-presenter-nav-btn:hover {
+    background: var(--background-modifier-hover);
+}
+
+.marp-presenter-slide-info {
+    font-size: var(--font-ui-medium);
+    color: var(--text-normal);
+    min-width: 120px;
+    text-align: center;
+}
+
+.marp-presenter-timer {
+    font-size: var(--font-ui-medium);
+    color: var(--text-muted);
+    font-family: monospace;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Presenter slide iframe */
+.marp-presenter-slide-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* Current slide preview needs position:relative for pointer dot */
+.marp-presenter-slide-preview-current {
+    position: relative;
+}
+
+/* Pointer dot overlay on current slide preview */
+.marp-presenter-pointer-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff0000;
+    box-shadow: 0 0 6px 3px rgba(255, 0, 0, 0.5);
+    pointer-events: none;
+    z-index: 10;
+    transform: translate(-50%, -50%);
+}

@@ -5,6 +5,9 @@ import { browser, type MarpCoreBrowser } from '@marp-team/marp-core/browser'
 import { MarpSlidesSettings } from '../utilities/settings'
 import { MarpExport } from '../utilities/marpExport';
 import { MarpPresentationView } from './marpPresentationView';
+import { PresentationController } from './presentationController';
+import { PresentationModal } from './presentationModal';
+import { MarpPresenterNotesView, MARP_PRESENTER_NOTES_VIEW } from './marpPresenterNotesView';
 import { FilePath } from '../utilities/filePath'
 import { ThemeLoader } from '../utilities/themeLoader'
 import { MathOptions } from '@marp-team/marp-core/types/src/math/math';
@@ -179,18 +182,56 @@ export class MarpPreviewView extends ItemView  {
     private async startPresentation() {
         if (!this.file) return;
 
+        const modal = new PresentationModal(this.app);
+        const result = await modal.open();
+        if (!result) return;
+
         const markdownText = await this.app.vault.read(this.file);
         const basePath = (new FilePath(this.settings)).getCompleteFileBasePath(this.file);
 
-        let { html, css } = this.marp.render(markdownText);
+        let { html, css, comments } = this.marp.render(markdownText);
 
         html = html.replace(
             /(?!background-image:url\(&quot;http)background-image:url\(&quot;/g,
             `background-image:url(&quot;${basePath}`
         );
 
-        const presenter = new MarpPresentationView();
-        await presenter.present(html, css, basePath);
+        // Count slides to create controller
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const totalSlides = tempDiv.querySelectorAll('[data-marp-vscode-slide-wrapper]').length;
+
+        const controller = new PresentationController(totalSlides, comments);
+
+        if (result.mode === 'fullscreen') {
+            const presenter = new MarpPresentationView();
+            await presenter.present(html, css, basePath, { fullscreen: true, controller });
+        } else {
+            // Popout window mode
+            const popoutLeaf = this.app.workspace.openPopoutLeaf();
+            const popoutDoc = popoutLeaf.view.containerEl.ownerDocument;
+            const presenter = new MarpPresentationView();
+            await presenter.present(html, css, basePath, {
+                fullscreen: false,
+                controller,
+                targetDocument: popoutDoc,
+            });
+        }
+
+        if (result.presenterView) {
+            const notesLeaf = this.app.workspace.openPopoutLeaf();
+            // Detach any existing presenter notes views
+            this.app.workspace.detachLeavesOfType(MARP_PRESENTER_NOTES_VIEW);
+            await notesLeaf.setViewState({
+                type: MARP_PRESENTER_NOTES_VIEW,
+                active: true,
+            });
+            // Set the controller and data on the view after it's created
+            const notesView = notesLeaf.view as MarpPresenterNotesView;
+            if (notesView && notesView.initPresenter) {
+                notesView.initPresenter(controller, html, css, basePath);
+            }
+        }
     }
 
     async displaySlides(view : MarkdownView) {
