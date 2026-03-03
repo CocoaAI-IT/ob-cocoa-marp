@@ -6,7 +6,7 @@ import { MARP_PREVIEW_VIEW, MarpPreviewView } from './views/marpPreviewView';
 import { MarpPresentationView } from './views/marpPresentationView';
 import { MarpPresenterNotesView, MARP_PRESENTER_NOTES_VIEW } from './views/marpPresenterNotesView';
 import { PresentationController } from './views/presentationController';
-import { PresentationModal } from './views/presentationModal';
+import { PresentationModalResult } from './views/presentationModal';
 import { MarpExport } from './utilities/marpExport';
 import { FilePath } from './utilities/filePath';
 import { ICON_SLIDE_PREVIEW, ICON_EXPORT_PDF, ICON_EXPORT_PPTX, ICON_SLIDE_PRESENT } from './utilities/icons';
@@ -97,9 +97,6 @@ export default class MarpSlides extends Plugin {
 			callback: () => { this.startPresentation(); }
 		});
 
-		this.addRibbonIcon('slides-marp-slide-present', 'Start Presentation', async () => {
-			await this.startPresentation();
-		});
 
 		// this.addCommand({
 		// 	id: 'export-deck',
@@ -149,9 +146,7 @@ export default class MarpSlides extends Plugin {
 			return;
 		}
 
-		const modal = new PresentationModal(this.app);
-		const result = await modal.open();
-		if (!result) return;
+		const result: PresentationModalResult = { mode: 'fullscreen', presenterView: true };
 
 		const filePathUtil = new FilePath(this.settings);
 		const basePath = filePathUtil.getCompleteFileBasePath(view.file);

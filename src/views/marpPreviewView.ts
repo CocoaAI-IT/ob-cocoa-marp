@@ -6,7 +6,7 @@ import { MarpSlidesSettings } from '../utilities/settings'
 import { MarpExport } from '../utilities/marpExport';
 import { MarpPresentationView } from './marpPresentationView';
 import { PresentationController } from './presentationController';
-import { PresentationModal } from './presentationModal';
+import { PresentationModalResult } from './presentationModal';
 import { MarpPresenterNotesView, MARP_PRESENTER_NOTES_VIEW } from './marpPresenterNotesView';
 import { FilePath } from '../utilities/filePath'
 import { ThemeLoader } from '../utilities/themeLoader'
@@ -182,9 +182,7 @@ export class MarpPreviewView extends ItemView  {
     private async startPresentation() {
         if (!this.file) return;
 
-        const modal = new PresentationModal(this.app);
-        const result = await modal.open();
-        if (!result) return;
+        const result: PresentationModalResult = { mode: 'fullscreen', presenterView: true };
 
         const markdownText = await this.app.vault.read(this.file);
         const basePath = (new FilePath(this.settings)).getCompleteFileBasePath(this.file);
