@@ -1,7 +1,8 @@
 import { App, requestUrl } from 'obsidian';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { dirname } from 'path';
 import { FilePath } from './filePath';
 import { MarpSlidesSettings } from './settings';
-import { existsSync, outputFileSync } from 'fs-extra';
 import JSZip from 'jszip';
 import { createHash } from 'crypto';
 
@@ -29,7 +30,6 @@ export class Libs {
                 if (EXPECTED_SHA256) {
                     const hash = createHash('sha256').update(buf).digest('hex');
                     if (hash !== EXPECTED_SHA256) {
-                        console.error(`SHA256 mismatch: expected ${EXPECTED_SHA256}, got ${hash}`);
                         return;
                     }
                 }
@@ -42,13 +42,14 @@ export class Libs {
                         const file = zip.file(filename);
                         if (file != null) {
                             const content = await file.async('nodebuffer');
-                            const dest = `${libPathUtility.getLibDirectory(app.vault)}${filename}`;
-                            outputFileSync(dest, content);
+                            const dest = `${libPath}${filename}`;
+                            mkdirSync(dirname(dest), { recursive: true });
+                            writeFileSync(dest, content);
                         }
                     }
                 }
-            } catch (error) {
-                console.error('Failed to download or extract libs:', error);
+            } catch {
+                // download failed; libs remain absent
             }
         }
     }

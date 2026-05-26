@@ -1,4 +1,5 @@
 export interface MarpSlidesSettings {
+	MarpCliPath: string;
 	CHROME_PATH: string;
 	ThemePath: string;
 	EnableHTML: boolean;
@@ -11,6 +12,7 @@ export interface MarpSlidesSettings {
 }
 
 export const DEFAULT_SETTINGS: MarpSlidesSettings = {
+	MarpCliPath: 'marp',
 	CHROME_PATH: '',
 	ThemePath: '',
 	EnableHTML: false,

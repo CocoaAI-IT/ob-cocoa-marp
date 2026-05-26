@@ -16,7 +16,15 @@ This plugin is a fork of [samuele-cozzi/obsidian-marp-slides](https://github.com
 - **Editable PPTX export** — generate a PPTX whose text is editable in PowerPoint (via PptxGenJS)
 - **Custom theme CSS** and three bundled themes (corporate / dark / enterprise)
 
-> **Note:** Exporting anything other than HTML requires [Google Chrome](https://www.google.com/chrome/), [Chromium](https://www.chromium.org/), or [Microsoft Edge](https://www.microsoft.com/edge). The browser path can be set via the `CHROME_PATH` setting.
+> **Export requirements:** HTML / PDF / PNG / image-based PPTX export is performed by the official [Marp CLI](https://github.com/marp-team/marp-cli), which is **not bundled** with this plugin. Install it separately and point the plugin at the executable:
+>
+> ```bash
+> npm install -g @marp-team/marp-cli
+> ```
+>
+> Then set the path in **Settings → Marp Slides Presenter → Marp CLI Path** (defaults to `marp`, resolved via `PATH`). PDF / PNG / PPTX export also requires [Google Chrome](https://www.google.com/chrome/), [Chromium](https://www.chromium.org/), or [Microsoft Edge](https://www.microsoft.com/edge); the browser path can be set via the `CHROME_PATH` setting.
+>
+> The **Editable PPTX** export uses [PptxGenJS](https://github.com/gitbrent/PptxGenJS) directly inside Obsidian and does **not** require Marp CLI or Chrome.
 
 ## Getting Started
 
@@ -135,7 +143,15 @@ MIT License — see [LICENSE](LICENSE).
 - **カスタムテーマ CSS** — 独自テーマの適用
 - **ビルトインテーマ** — corporate / dark / enterprise テーマを同梱
 
-> **Note:** HTML 以外のエクスポートには [Google Chrome](https://www.google.com/chrome/)、[Chromium](https://www.chromium.org/)、または [Microsoft Edge](https://www.microsoft.com/edge) のいずれかが必要です。設定の `CHROME_PATH` でパスを指定できます。
+> **エクスポートに必要な環境:** HTML / PDF / PNG / 画像ベース PPTX のエクスポートは公式の [Marp CLI](https://github.com/marp-team/marp-cli) を呼び出して行います。**プラグインにはバンドルされていません**。別途インストールしてプラグインに実行パスを指定してください。
+>
+> ```bash
+> npm install -g @marp-team/marp-cli
+> ```
+>
+> 設定 → **Marp Slides Presenter** → **Marp CLI Path** にパスを指定します（既定値は `marp`、`PATH` から解決されます）。PDF / PNG / PPTX エクスポートには [Google Chrome](https://www.google.com/chrome/)、[Chromium](https://www.chromium.org/)、または [Microsoft Edge](https://www.microsoft.com/edge) のいずれかも必要で、`CHROME_PATH` でパスを指定できます。
+>
+> **編集可能 PPTX エクスポート** は [PptxGenJS](https://github.com/gitbrent/PptxGenJS) を Obsidian 内で直接実行するため、Marp CLI や Chrome は不要です。
 
 ## はじめに
 

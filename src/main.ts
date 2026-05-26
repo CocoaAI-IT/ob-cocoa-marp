@@ -280,6 +280,17 @@ export class MarpSlidesSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', {text: 'Marp Slides Presenter - Settings'});
 
 		new Setting(containerEl)
+			.setName('Marp CLI Path')
+			.setDesc('Path to the marp-cli executable. Install with: npm install -g @marp-team/marp-cli. Defaults to "marp" (resolved via PATH).')
+			.addText(text => text
+				.setPlaceholder('marp')
+				.setValue(this.plugin.settings.MarpCliPath)
+				.onChange(async (value) => {
+					this.plugin.settings.MarpCliPath = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Chrome Path')
 			.setDesc('Sets the custom path for Chrome or Chromium-based browser to export PDF, PPTX, and image. If it\'s empty, Marp will find out the installed Google Chrome / Chromium / Microsoft Edge.')
 			.addText(text => text

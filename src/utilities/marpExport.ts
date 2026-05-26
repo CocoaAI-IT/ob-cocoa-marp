@@ -1,5 +1,5 @@
-import marpCli, { CLIError, CLIErrorCode } from '@marp-team/marp-cli'
-import { TFile, App } from 'obsidian';
+import { TFile, App, Notice } from 'obsidian';
+import { spawn } from 'child_process';
 import { MarpSlidesSettings } from './settings';
 import { FilePath } from './filePath';
 import { ThemeLoader } from './themeLoader';
@@ -41,147 +41,98 @@ export class MarpExport {
         await filesTool.copyFileToRoot(file);
         const completeFilePath = filesTool.getCompleteFilePath(file);
         const themePath = filesTool.getThemePath(file);
-        const resourcesPath = filesTool.getLibDirectory(file.vault);
         const marpEngineConfig = filesTool.getMarpEngine(file.vault);
 
-        if (completeFilePath != ''){            
-            //console.log(completeFilePath);
-            
-            const argv: string[] = [completeFilePath,'--allow-local-files'];
-            //const argv: string[] = ['--engine', '@marp-team/marp-core', completeFilePath,'--allow-local-files'];
+        if (completeFilePath != ''){
+            const argv: string[] = [completeFilePath, '--allow-local-files'];
 
             if (this.settings.EnableMarkdownItPlugins){
-                argv.push('--engine');
-                argv.push(marpEngineConfig);
+                argv.push('--engine', marpEngineConfig);
             }
 
             if (this.settings.EnableBuiltinThemes) {
                 const pluginDir = filesTool.getPluginDirectory(file.vault);
                 const builtinDir = ThemeLoader.writeBuiltinThemesForExport(pluginDir);
-                argv.push('--theme-set');
-                argv.push(builtinDir);
+                argv.push('--theme-set', builtinDir);
             }
 
             if (themePath != ''){
-                argv.push('--theme-set');
-                argv.push(themePath);
+                argv.push('--theme-set', themePath);
             }
 
             switch (type) {
                 case 'pdf':
                     argv.push('--pdf');
                     if (this.settings.EXPORT_PATH != ''){
-                        argv.push('-o');
-                        argv.push(`${this.settings.EXPORT_PATH}${file.basename}.pdf`);
+                        argv.push('-o', `${this.settings.EXPORT_PATH}${file.basename}.pdf`);
                     }
                     break;
                 case 'pdf-with-notes':
-                    argv.push('--pdf');
-                    argv.push('--pdf-notes');
-                    argv.push('--pdf-outlines');
+                    argv.push('--pdf', '--pdf-notes', '--pdf-outlines');
                     if (this.settings.EXPORT_PATH != ''){
-                        argv.push('-o');
-                        argv.push(`${this.settings.EXPORT_PATH}${file.basename}.pdf`);
+                        argv.push('-o', `${this.settings.EXPORT_PATH}${file.basename}.pdf`);
                     }
                     break;
                 case 'pptx':
                     argv.push('--pptx');
                     if (this.settings.EXPORT_PATH != ''){
-                        argv.push('-o');
-                        argv.push(`${this.settings.EXPORT_PATH}${file.basename}.pptx`);
+                        argv.push('-o', `${this.settings.EXPORT_PATH}${file.basename}.pptx`);
                     }
                     break;
                 case 'png':
-                    argv.push('--images');
-                    argv.push('--png');
+                    argv.push('--images', '--png');
                     if (this.settings.EXPORT_PATH != ''){
-                        argv.push('-o');
-                        argv.push(`${this.settings.EXPORT_PATH}${file.basename}.png`);
+                        argv.push('-o', `${this.settings.EXPORT_PATH}${file.basename}.png`);
                     }
                     break;
                 case 'html':
-                    argv.push('--html');
-                    argv.push('--template');
-                    argv.push(this.settings.HTMLExportMode);
+                    argv.push('--html', '--template', this.settings.HTMLExportMode);
                     break;
                 case 'preview':
-                    argv.push('--html');
-                    argv.push('--preview');
+                    argv.push('--html', '--preview');
                     break;
-                default:
-                    //argv.push('--template');
-                    //argv.push('bare');
-                    //argv.push('bespoke');
-                    //argv.push('--engine');
-                    //argv.push('@marp-team/marpit');
-                    //argv.remove(completeFilePath);
-                    //process.env.PORT = "5001";
-                    //argv.push('PORT=5001');
-                    //argv.push('--server');
-                    
-                    //argv.push('--watch');
             }
-            await this.run(argv, resourcesPath);
-        } 
-
-    }
-
-    //async exportPdf(argv: string[], opts?: MarpCLIAPIOptions | undefined){
-    private async run(argv: string[], resourcesPath: string){
-        const { CHROME_PATH } = process.env;
-
-        try {
-            process.env.CHROME_PATH = this.settings.CHROME_PATH || CHROME_PATH;
-
-            this.runMarpCli(argv, resourcesPath);
-            
-        } catch (e) {
-            console.error(e)
-
-            if (
-                e instanceof CLIError &&
-                e.errorCode === CLIErrorCode.NOT_FOUND_CHROMIUM
-            ) {
-                const browsers = ['[Google Chrome](https://www.google.com/chrome/)']
-
-                if (process.platform === 'linux')
-                    browsers.push('[Chromium](https://www.chromium.org/)')
-
-                browsers.push('[Microsoft Edge](https://www.microsoft.com/edge)')
-
-                throw new MarpCLIError(
-                    `It requires to install ${browsers
-                    .join(', ')
-                    .replace(/, ([^,]*)$/, ' or $1')} for exporting.`
-                )
-            }
-
-            throw e
-        } finally {
-            process.env.CHROME_PATH = CHROME_PATH
+            await this.runMarpCli(argv);
         }
     }
 
-    private async runMarpCli(argv: string[], resourcesPath: string) {
-        //console.info(`Execute Marp CLI [${argv.join(' ')}] (${JSON.stringify(opts)})`)
-        console.info(`Execute Marp CLI [${argv.join(' ')}]`);
-        let temp__dirname = __dirname;
-
-        try {    
-            __dirname = resourcesPath;
-            const exitCode = await marpCli(argv, {});
-
-            if (exitCode > 0) {
-                console.error(`Failure (Exit status: ${exitCode})`)
+    private runMarpCli(argv: string[]): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const marpPath = this.settings.MarpCliPath || 'marp';
+            const env = { ...process.env };
+            if (this.settings.CHROME_PATH) {
+                env.CHROME_PATH = this.settings.CHROME_PATH;
             }
-        } catch(e) {
-            if (e instanceof CLIError){
-                console.error(`CLIError code: ${e.errorCode}, message: ${e.message}`);
-            } else {
-                console.error("Generic Error!");
-            }
-        }
 
-        __dirname = temp__dirname;
+            const child = spawn(marpPath, argv, { env, shell: false });
+
+            let stderr = '';
+            child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+            child.stdout.on('data', () => { /* discard */ });
+
+            child.on('error', (err: NodeJS.ErrnoException) => {
+                if (err.code === 'ENOENT') {
+                    new Notice(
+                        `Marp CLI not found at "${marpPath}". ` +
+                        `Install it with: npm install -g @marp-team/marp-cli ` +
+                        `and set the Marp CLI Path in plugin settings.`,
+                        10000,
+                    );
+                    reject(new MarpCLIError(`marp-cli not found: ${marpPath}`));
+                } else {
+                    reject(err);
+                }
+            });
+
+            child.on('close', (code) => {
+                if (code === 0) {
+                    resolve();
+                } else {
+                    const msg = stderr.trim() || `Marp CLI exited with code ${code}`;
+                    new Notice(`Marp export failed: ${msg}`, 10000);
+                    reject(new MarpCLIError(msg));
+                }
+            });
+        });
     }
 }

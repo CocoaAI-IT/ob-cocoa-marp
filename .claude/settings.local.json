@@ -11,7 +11,16 @@
       "Bash(git push:*)",
       "Bash(gh release:*)",
       "Bash(rm:*)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "Bash(git tag *)",
+      "Bash(grep -ao \"_0x[a-f0-9]\\\\{2,\\\\}\" /home/cocoa/cocoaProject/ob-cocoa-marp/main.js)",
+      "Bash(awk 'NR==150038' /home/cocoa/cocoaProject/ob-cocoa-marp/main.js)",
+      "Bash(git rm *)",
+      "Bash(grep -aoE \"\\(^|[^a-zA-Z_$]\\)eval\\\\\\(\" main.js)",
+      "Bash(grep -an \"createElement\\(\\\\\"script\\\\\"\\)\\\\|createElement\\('script'\\)\\\\|new Function\\(\\\\|^eval\\\\|[^a-zA-Z_$]eval\\(\" main.js)",
+      "Bash(awk 'NR>=135170 && NR<=135180' main.js)",
+      "Bash(awk 'NR>=139875 && NR<=139885' main.js)",
+      "Bash(awk 'NR>=138100 && NR<=138110' main.js)"
     ]
   }
 }

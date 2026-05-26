@@ -1,7 +1,9 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
+import { builtinModules } from "module";
 import { copy } from 'esbuild-plugin-copy';
+
+const builtins = [...builtinModules, ...builtinModules.map((m) => `node:${m}`)];
 
 const banner =
 `/*
@@ -41,8 +43,6 @@ const context = await esbuild.context({
 	external: [
 		"obsidian",
 		"electron",
-		"chromium-bidi/lib/cjs/bidiMapper/bidiMapper.js",
-		"emitter",
 		"@codemirror/autocomplete",
 		"@codemirror/collab",
 		"@codemirror/commands",

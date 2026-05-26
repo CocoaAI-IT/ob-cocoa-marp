@@ -102,18 +102,18 @@
     position: relative;
 }
 
-.marp-presentation-slide-container [data-marp-vscode-slide-wrapper] {
-    position: absolute !important;
+.marp-presentation-overlay .marp-presentation-slide-container [data-marp-vscode-slide-wrapper] {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    visibility: hidden !important;
+    visibility: hidden;
     z-index: 0;
 }
 
-.marp-presentation-slide-container [data-marp-vscode-slide-wrapper].active {
-    visibility: visible !important;
+.marp-presentation-overlay .marp-presentation-slide-container [data-marp-vscode-slide-wrapper].active {
+    visibility: visible;
     z-index: 1;
 }
 
