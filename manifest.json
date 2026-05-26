@@ -4,7 +4,7 @@
   "version": "1.3.0",
   "minAppVersion": "1.5.0",
   "description": "Create and present Marp markdown slides with a fullscreen mode, popout presenter view, and laser pointer.",
-  "author": "cocoa",
+  "author": "cocoaai-it",
   "authorUrl": "https://github.com/CocoaAI-IT",
   "isDesktopOnly": true
 }
