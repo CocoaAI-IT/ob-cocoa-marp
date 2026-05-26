@@ -1,6 +1,6 @@
 {
 	"name": "marp-slides-presenter",
-	"version": "1.4.0",
+	"version": "1.4.1",
 	"description": "Create and present Marp markdown slides with a fullscreen mode, popout presenter view, and laser pointer.",
 	"main": "src/main.js",
 	"scripts": {
@@ -41,6 +41,9 @@
 	"pnpm": {
 		"onlyBuiltDependencies": [
 			"esbuild"
-		]
+		],
+		"overrides": {
+			"markdown-it": "^14.1.1"
+		}
 	}
 }

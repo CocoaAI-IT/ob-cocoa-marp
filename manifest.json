@@ -1,7 +1,7 @@
 {
   "id": "marp-slides-presenter",
   "name": "Marp Slides Presenter",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "minAppVersion": "1.5.0",
   "description": "Create and present Marp markdown slides with a fullscreen mode, popout presenter view, and laser pointer.",
   "author": "cocoaai-it",
