@@ -3,6 +3,12 @@
   Toolbar, fullscreen presentation overlay, and laser pointer
 */
 
+/* Preview root container */
+.marp-preview-container {
+    display: flex;
+    flex-direction: column;
+}
+
 /* Preview toolbar */
 .marp-preview-toolbar {
     display: flex;
@@ -139,6 +145,11 @@
     pointer-events: none;
     position: fixed;
     z-index: 10001;
+    display: none;
+}
+
+.marp-laser-pointer.visible {
+    display: block;
 }
 
 /* Auto-hide cursor and counter */
@@ -346,4 +357,9 @@
     pointer-events: none;
     z-index: 10;
     transform: translate(-50%, -50%);
+    display: none;
+}
+
+.marp-presenter-pointer-dot.visible {
+    display: block;
 }

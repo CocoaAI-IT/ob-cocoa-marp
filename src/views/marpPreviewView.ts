@@ -66,8 +66,7 @@ export class MarpPreviewView extends ItemView  {
     async onOpen() {
         const container = this.containerEl.children[1] as HTMLElement;
         container.empty();
-        container.style.display = 'flex';
-        container.style.flexDirection = 'column';
+        container.addClass('marp-preview-container');
 
         // Create toolbar
         this.toolbarEl = container.createDiv({ cls: 'marp-preview-toolbar' });
@@ -263,10 +262,6 @@ export class MarpPreviewView extends ItemView  {
 
             this.slideContentEl.innerHTML = htmlFile;
             this.marpBrowser?.update();
-        }
-        else
-        {
-            console.log("Errore: view.file is null")
         }
 	}
 }

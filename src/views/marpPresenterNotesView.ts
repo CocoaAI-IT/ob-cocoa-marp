@@ -82,7 +82,6 @@ export class MarpPresenterNotesView extends ItemView {
 
         // Pointer dot overlay on current slide
         this.pointerDot = this.currentSlideEl.createDiv({ cls: 'marp-presenter-pointer-dot' });
-        this.pointerDot.style.display = 'none';
 
         // Speaker notes
         const notesSection = container.createDiv({ cls: 'marp-presenter-notes-section' });
@@ -217,11 +216,11 @@ export class MarpPresenterNotesView extends ItemView {
         if (!this.pointerDot) return;
 
         if (!visible) {
-            this.pointerDot.style.display = 'none';
+            this.pointerDot.classList.remove('visible');
             return;
         }
 
-        this.pointerDot.style.display = 'block';
+        this.pointerDot.classList.add('visible');
         this.pointerDot.style.left = `${x * 100}%`;
         this.pointerDot.style.top = `${y * 100}%`;
     }

@@ -109,7 +109,6 @@ export class MarpPresentationView {
 
         this.laserPointer = this.targetDoc.createElement('div') as HTMLDivElement;
         this.laserPointer.className = 'marp-laser-pointer';
-        this.laserPointer.style.display = 'none';
         this.overlay.appendChild(this.laserPointer);
 
         this.overlay.addEventListener('click', this.boundClick);
@@ -234,7 +233,7 @@ export class MarpPresentationView {
         }
 
         if (this.laserPointer) {
-            this.laserPointer.style.display = this.laserActive ? 'block' : 'none';
+            this.laserPointer.classList.toggle('visible', this.laserActive);
         }
 
         // Notify controller when laser is turned off
