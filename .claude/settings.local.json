@@ -20,7 +20,14 @@
       "Bash(grep -an \"createElement\\(\\\\\"script\\\\\"\\)\\\\|createElement\\('script'\\)\\\\|new Function\\(\\\\|^eval\\\\|[^a-zA-Z_$]eval\\(\" main.js)",
       "Bash(awk 'NR>=135170 && NR<=135180' main.js)",
       "Bash(awk 'NR>=139875 && NR<=139885' main.js)",
-      "Bash(awk 'NR>=138100 && NR<=138110' main.js)"
+      "Bash(awk 'NR>=138100 && NR<=138110' main.js)",
+      "Bash(git stash *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm approve-builds *)",
+      "Bash(pnpm rebuild *)",
+      "Bash(node -e ' *)",
+      "Bash(pnpm run *)",
+      "Bash(pnpm add *)"
     ]
   }
 }
