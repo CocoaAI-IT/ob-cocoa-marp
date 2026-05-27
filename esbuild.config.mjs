@@ -14,7 +14,7 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === "production");
 
-// Plugin to force pptxgenjs to use browser code paths in Obsidian (Electron).
+// Force pptxgenjs to use browser code paths in Obsidian (Electron).
 // Electron has process.versions.node set, so pptxgenjs thinks it's Node.js
 // and tries to import('node:https') / import('node:fs') which fail in Obsidian.
 const pptxBrowserPlugin = {
@@ -23,7 +23,6 @@ const pptxBrowserPlugin = {
 		build.onLoad({ filter: /pptxgenjs[/\\]dist[/\\]pptxgen\./ }, async (args) => {
 			const fs = await import('fs');
 			let contents = fs.readFileSync(args.path, 'utf8');
-			// Replace isNode detection patterns (both readable and minified forms)
 			contents = contents.replaceAll(
 				/(?:const|var|let)\s+isNode\s*=\s*typeof process\s*!==?\s*['"]undefined['"]\s*&&\s*!!\(.*?\.node\).*?===?\s*['"]node['"]/g,
 				'const isNode = false'
@@ -33,13 +32,68 @@ const pptxBrowserPlugin = {
 	}
 };
 
+// Force jszip to resolve to its `./lib/index.js` source files rather than the
+// pre-bundled `dist/jszip.min.js` (selected by the `browser` field). The
+// pre-bundled file ships an IE-only setImmediate polyfill that creates a
+// `<script>` element, which the Obsidian community review flags as dynamic
+// code injection. The `lib/` source uses the `setimmediate` package, which we
+// stub out elsewhere in this file.
+const jszipNoBrowserBundlePlugin = {
+	name: 'jszip-no-browser-bundle',
+	setup(build) {
+		build.onResolve({ filter: /^jszip$/ }, async (args) => {
+			const result = await build.resolve('jszip/lib/index.js', {
+				kind: args.kind,
+				resolveDir: args.resolveDir,
+			});
+			if (result.errors.length > 0) return result;
+			return { path: result.path };
+		});
+	},
+};
+
+// Stub out the `setimmediate` and `immediate` polyfill packages.
+// Both ship IE-only `document.createElement("script")` fallbacks for
+// scheduling microtasks, which (a) is dead code in Electron — `setImmediate`
+// is native — and (b) trips the Obsidian community review's "dynamic <script>
+// creation" check. We replace them with native-API shims.
+const immediatePolyfillStubPlugin = {
+	name: 'strip-immediate-polyfills',
+	setup(build) {
+		// `setimmediate` is required for its side effect of installing a global
+		// `setImmediate`. Electron provides it natively, so the require is a no-op.
+		build.onResolve({ filter: /^setimmediate$/ }, (args) => ({
+			path: args.path,
+			namespace: 'immediate-stub',
+		}));
+		// `immediate` exports a single function used like `immediate(fn)`. Defer
+		// to native `queueMicrotask` (or `setTimeout` as a last resort).
+		build.onResolve({ filter: /^immediate$/ }, (args) => ({
+			path: args.path,
+			namespace: 'immediate-stub',
+		}));
+		build.onLoad({ filter: /.*/, namespace: 'immediate-stub' }, (args) => {
+			if (args.path === 'setimmediate') {
+				return { contents: '// stubbed: Electron has native setImmediate', loader: 'js' };
+			}
+			return {
+				contents:
+					'module.exports = typeof queueMicrotask === "function"\n' +
+					'  ? function (fn) { queueMicrotask(fn); }\n' +
+					'  : function (fn) { setTimeout(fn, 0); };\n',
+				loader: 'js',
+			};
+		});
+	},
+};
+
 const context = await esbuild.context({
 	banner: {
 		js: banner,
 	},
 	entryPoints: ["main.ts"],
 	bundle: true,
-	plugins: [pptxBrowserPlugin],
+	plugins: [pptxBrowserPlugin, jszipNoBrowserBundlePlugin, immediatePolyfillStubPlugin],
 	external: [
 		"obsidian",
 		"electron",

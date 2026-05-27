@@ -27,7 +27,23 @@
       "Bash(pnpm rebuild *)",
       "Bash(node -e ' *)",
       "Bash(pnpm run *)",
-      "Bash(pnpm add *)"
+      "Bash(pnpm add *)",
+      "Bash(pnpm list *)",
+      "Bash(pnpm view *)",
+      "Bash(pnpm test *)",
+      "Bash(node *)",
+      "Bash(awk 'NR>=136580 && NR<=136600' main.js)",
+      "Bash(awk 'NR>=138035 && NR<=138060' main.js)",
+      "Bash(grep -o \"onreadystatechange\\\\\" in [a-zA-Z0-9_$.]*\\\\.createElement\\(\\\\\"script\\\\\"\\)\" node_modules/.pnpm/pptxgenjs@4.0.1/node_modules/pptxgenjs/dist/pptxgen.bundle.js)",
+      "Bash(grep -aoE \".{0,100}createElement\\\\\\(['\\\\\"]script['\\\\\"]\\\\\\).{0,100}\" node_modules/.pnpm/pptxgenjs@4.0.1/node_modules/pptxgenjs/dist/pptxgen.bundle.js)",
+      "Bash(grep -aoE \".{0,80}createElement\\\\\\(['\\\\\"]script['\\\\\"]\\\\\\).{0,80}\" node_modules/.pnpm/pptxgenjs@4.0.1/node_modules/pptxgenjs/dist/pptxgen.es.js)",
+      "Bash(grep -aoE \".{0,40}createElement.{0,40}\" node_modules/.pnpm/pptxgenjs@4.0.1/node_modules/pptxgenjs/dist/pptxgen.es.js)",
+      "Bash(awk 'NR>=136500 && NR<=136600' main.js)",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(json.dumps\\(p.get\\('browser',{}\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('main:', p.get\\('main'\\)\\); print\\('browser:', json.dumps\\(p.get\\('browser','none'\\), indent=2\\)\\); print\\('module:', p.get\\('module','none'\\)\\)\")",
+      "Bash(awk 'NR==136590' main.js)",
+      "Bash(awk 'NR>=136900 && NR<=136910' main.js)",
+      "Bash(grep -aoE \"[^a-zA-Z_$]eval\\\\\\(\" main.js)"
     ]
   }
 }

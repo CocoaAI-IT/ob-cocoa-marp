@@ -10,7 +10,6 @@ import { PresentationModalResult } from './views/presentationModal';
 import { MarpExport } from './utilities/marpExport';
 import { FilePath } from './utilities/filePath';
 import { ICON_SLIDE_PREVIEW, ICON_EXPORT_PDF, ICON_EXPORT_PPTX, ICON_SLIDE_PRESENT } from './utilities/icons';
-import { Libs } from './utilities/libs';
 import { ThemeLoader } from './utilities/themeLoader';
 import { MarpSlidesSettings, DEFAULT_SETTINGS } from 'utilities/settings';
 
@@ -27,9 +26,6 @@ export default class MarpSlides extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
-		const libsUtility = new Libs(this.settings);
-		libsUtility.loadLibs(this.app);
 
 		this.registerView(
 			MARP_PREVIEW_VIEW,
